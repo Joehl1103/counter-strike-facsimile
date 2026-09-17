@@ -1,0 +1,44 @@
+name: Merge coordinator
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: [CI, Codex review]
+    types: [completed]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One update or merge at a time. Missed wakeups are recovered by the schedule.
+concurrency:
+  group: merge-coordinator
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: merge-coordinator
+    steps:
+      # Never use a workflow_run artifact, head branch, title or script from a PR.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.14.0'
+      - name: Reconcile open PRs using trusted main policy
+        env:
+          # Fine-grained repository token: Contents, Pull requests, Actions write.
+          # Kept only in a main-branch-restricted environment. Unlike GITHUB_TOKEN,
+          # its update-branch events start fresh CI/review without approval loops.
+          MERGE_BOT_TOKEN: ${{ secrets.MERGE_BOT_TOKEN }}
+          MERGE_BOT_LOGIN: ${{ vars.MERGE_BOT_LOGIN }}
+          TYPESAFE_API: ${{ secrets.TYPESAFE_API }}
+        run: node .github/scripts/github-coordinator.mjs

@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/Joehl1103/counter-strike-facsimile",
+  "linear": {
+    "workspace": "jkhl1103-personal",
+    "team": "JKH",
+    "teamId": "9a52a429-c9ac-4b20-8057-7104306a047c",
+    "projectId": "448d0461-1894-4bf9-93fb-d6282b961274",
+    "projectUrl": "https://linear.app/jkhl1103-personal/project/counter-strike-16-7c7dc1369cb9",
+    "planDocumentId": "989c153c-26c7-4e3c-b985-6520fb3fad21",
+    "methodDocumentId": "a7aba96d-c197-4dee-92dd-229cfe527f15",
+    "githubIssueCreationDirection": "github-to-linear",
+    "nativeConnectionVerifiedOn": "2026-09-16"
+  }
+}

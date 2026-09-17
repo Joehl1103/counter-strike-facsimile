@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository:
+    name: Repository checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.14.0'
+      - run: node --test .github/scripts/*.test.mjs
+      - run: node .github/scripts/ci-policy.mjs
+
+  game:
+    name: Game checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.14.0'
+      - name: Validate project and run game checks when imported
+        shell: bash
+        run: |
+          node .github/scripts/ci-policy.mjs
+          if [[ ! -f package.json ]]; then
+            echo 'Documentation scaffold only. Game source has not been imported; gameplay, performance and build remain unverified.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run build

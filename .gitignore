@@ -1,0 +1,5 @@
+node_modules/
+.next/
+outputs/
+.local-archive/
+.env*
