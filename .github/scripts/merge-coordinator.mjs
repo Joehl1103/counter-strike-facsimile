@@ -26,11 +26,14 @@ function candidateIdentity(snapshot) {
   };
 }
 
-function sameIdentity(left, right, { allowStalePrBase = false } = {}) {
+function sameCandidateAndMain(left, right) {
   return left.pr.number === right.pr.number &&
     left.pr.head.sha === right.pr.head.sha && left.pr.base.sha === right.pr.base.sha &&
-    left.baseSha === right.baseSha &&
-    (allowStalePrBase || right.baseSha === right.pr.base.sha);
+    left.baseSha === right.baseSha;
+}
+
+function sameIdentity(left, right) {
+  return sameCandidateAndMain(left, right) && right.baseSha === right.pr.base.sha;
 }
 
 function validIdentity(snapshot) {
@@ -101,11 +104,23 @@ async function validateRulesBeforeWrite(github) {
   validateEffectiveRules(await github.effectiveRules());
 }
 
-async function freshSnapshot(github, priorSnapshot, { allowStalePrBase = false } = {}) {
+async function readCurrentSnapshot(github, priorSnapshot) {
   const currentSnapshot = await github.snapshot(priorSnapshot.pr.number);
   assert.ok(validIdentity(currentSnapshot), 'GitHub returned a malformed live PR snapshot.');
-  assert.ok(sameIdentity(priorSnapshot, currentSnapshot, { allowStalePrBase }),
+  return currentSnapshot;
+}
+
+async function freshSnapshot(github, priorSnapshot) {
+  const currentSnapshot = await readCurrentSnapshot(github, priorSnapshot);
+  assert.ok(sameIdentity(priorSnapshot, currentSnapshot),
     'PR head or base changed during coordination.');
+  return currentSnapshot;
+}
+
+async function freshUpdateSnapshot(github, priorSnapshot) {
+  const currentSnapshot = await readCurrentSnapshot(github, priorSnapshot);
+  assert.ok(sameCandidateAndMain(priorSnapshot, currentSnapshot),
+    'PR head or current main changed before the branch update.');
   return currentSnapshot;
 }
 
@@ -217,7 +232,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
 
     if (snapshot.behind === true) {
       try {
-        const current = await freshSnapshot(github, snapshot, { allowStalePrBase: true });
+        const current = await freshUpdateSnapshot(github, snapshot);
         validateReadyCandidate(current, repository);
         assert.equal(current.behind, true, 'PR is no longer behind main.');
         await validateRulesBeforeWrite(github);

@@ -68,6 +68,15 @@ function createGithub(snapshots, changes = {}) {
   };
 }
 
+test('an empty PR queue has no candidate to inspect or mutate', async () => {
+  const github = createGithub([]);
+
+  const result = await coordinate({ github, repository });
+
+  assert.deepEqual(result.results, []);
+  assert.equal(github.calls.some((call) => ['update', 'merge', 'comment'].includes(call[0])), false);
+});
+
 test('merges the first fully current candidate with exact expected identity', async () => {
   const github = createGithub([snapshot(1)]);
   const result = await coordinate({ github, repository, triage: async () => assert.fail('green PRs never need triage') });
