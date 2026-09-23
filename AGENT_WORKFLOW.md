@@ -14,3 +14,8 @@ deployment is allowed. See [MERGE_COORDINATOR.md](MERGE_COORDINATOR.md).
 
 Secrets belong only in environments restricted to main. Candidate code never
 runs with merge credentials. Workflow-only scaffold checks are not game acceptance.
+After installing Codex, the review job starts a root-owned local relay from
+trusted main files. That relay sends the unchanged Ollama environment secret
+only to Ollama's Responses endpoint. The Codex Action's proxy receives a local
+placeholder key, then drops sudo before inspecting the PR. The relay and
+reviewer never execute candidate code.

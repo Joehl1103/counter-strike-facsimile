@@ -71,6 +71,9 @@ Comments mention @Joehl1103 only for an actionable hold, with exact candidate
 identity and a fixed reason. Provider output and arbitrary PR text are not copied
 into comments. Repeated ticks do not repeat the same notification. Repair the
 branch or configuration and push the change; a changed candidate is reconsidered.
+A current branch whose PR base metadata still names an older main commit is held
+with one `stale_base_metadata` notice for human inspection; the coordinator does
+not merge it against the mismatched base.
 A spent retry requires inspection rather than repeatedly pressing rerun.
 
 This is a trusted-collaborator repository model. A writer can change workflow
