@@ -29,7 +29,7 @@ function candidateIdentity(snapshot) {
 function sameIdentity(left, right) {
   return left.pr.number === right.pr.number &&
     left.pr.head.sha === right.pr.head.sha && left.pr.base.sha === right.pr.base.sha &&
-    left.baseSha === right.baseSha && right.baseSha === right.pr.base.sha;
+    left.baseSha === right.baseSha;
 }
 
 function validIdentity(snapshot) {
@@ -200,7 +200,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
       continue;
     }
 
-    if (snapshot.baseSha !== snapshot.pr.base.sha || snapshot.pr.mergeable == null) {
+    if (snapshot.pr.mergeable == null) {
       results.push({ number, outcome: 'waiting', reasonCode: 'mergeability_pending' });
       continue;
     }
@@ -229,6 +229,13 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
         results.push(blockedResult(number, 'stale_before_update'));
         continue;
       }
+    }
+
+    // GitHub can retain the PR's older base SHA while its branch is behind main.
+    // Only an update may proceed in that state; merges require the current base.
+    if (snapshot.baseSha !== snapshot.pr.base.sha) {
+      results.push({ number, outcome: 'waiting', reasonCode: 'mergeability_pending' });
+      continue;
     }
 
     const failures = failedChecks(snapshot);

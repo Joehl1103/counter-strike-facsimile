@@ -93,6 +93,31 @@ test('updates one clean behind candidate and returns before attempting a merge',
   assert.equal(github.calls.some((call) => call[0] === 'merge'), false);
 });
 
+test('updates a behind branch even when GitHub retains its old PR base SHA', async () => {
+  const currentMainSha = 'd'.repeat(40);
+  const staleBranch = snapshot(1, { baseSha: currentMainSha, behind: true });
+  const github = createGithub([staleBranch]);
+
+  const result = await coordinate({ github, repository });
+
+  assert.deepEqual(result.results, [{ number: 1, outcome: 'updated', head }]);
+  assert.deepEqual(github.calls.find((call) => call[0] === 'update'), ['update', 1, head]);
+  assert.equal(github.calls.some((call) => call[0] === 'merge'), false);
+});
+
+test('refuses a stale-branch update if main changes between snapshots', async () => {
+  const firstSnapshot = snapshot(1, { baseSha: 'd'.repeat(40), behind: true });
+  const changedMainSnapshot = snapshot(1, { baseSha: 'e'.repeat(40), behind: true });
+  const github = createGithub([firstSnapshot], {
+    snapshotSequence: [firstSnapshot, changedMainSnapshot],
+  });
+
+  const result = await coordinate({ github, repository });
+
+  assert.equal(result.results[0].reasonCode, 'stale_before_update');
+  assert.equal(github.calls.some((call) => call[0] === 'update'), false);
+});
+
 test('pending checks wait quietly and do not call the model', async () => {
   const github = createGithub([snapshot(1, { checks: [{ name: 'Repository checks', state: 'pending' }] })]);
   const result = await coordinate({ github, repository, triage: async () => assert.fail('pending check called triage') });
