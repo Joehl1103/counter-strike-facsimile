@@ -118,6 +118,24 @@ test('refuses a stale-branch update if main changes between snapshots', async ()
   assert.equal(github.calls.some((call) => call[0] === 'update'), false);
 });
 
+test('reports a current branch with stale PR base metadata instead of merging', async () => {
+  const currentMainSha = 'd'.repeat(40);
+  const staleMetadata = snapshot(1, { baseSha: currentMainSha });
+  const github = createGithub([staleMetadata]);
+
+  const firstResult = await coordinate({ github, repository });
+  const secondResult = await coordinate({ github, repository });
+
+  assert.deepEqual(firstResult.results, [{
+    number: 1,
+    outcome: 'blocked',
+    reasonCode: 'stale_base_metadata',
+  }]);
+  assert.deepEqual(secondResult.results, firstResult.results);
+  assert.equal(github.calls.filter((call) => call[0] === 'comment').length, 1);
+  assert.equal(github.calls.some((call) => ['update', 'merge'].includes(call[0])), false);
+});
+
 test('pending checks wait quietly and do not call the model', async () => {
   const github = createGithub([snapshot(1, { checks: [{ name: 'Repository checks', state: 'pending' }] })]);
   const result = await coordinate({ github, repository, triage: async () => assert.fail('pending check called triage') });
@@ -180,6 +198,21 @@ test('a changed head or base after the action decision prevents the write and al
   assert.equal(result.results[0].reasonCode, 'stale_before_merge');
   assert.equal(result.results[1].outcome, 'merged');
   assert.equal(github.calls.some((call) => call[0] === 'merge' && call[1] === 1), false);
+});
+
+test('refuses a final merge if the PR base metadata changes between snapshots', async () => {
+  const firstSnapshot = snapshot(1);
+  const changedBaseSnapshot = snapshot(1, {
+    pr: { base: { ref: 'main', sha: 'd'.repeat(40) } },
+  });
+  const github = createGithub([firstSnapshot], {
+    snapshotSequence: [firstSnapshot, changedBaseSnapshot, changedBaseSnapshot],
+  });
+
+  const result = await coordinate({ github, repository });
+
+  assert.equal(result.results[0].reasonCode, 'stale_before_merge');
+  assert.equal(github.calls.some((call) => call[0] === 'merge'), false);
 });
 
 test('weakened effective rules prevent all writes', async () => {
