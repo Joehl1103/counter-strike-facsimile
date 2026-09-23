@@ -72,6 +72,22 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$REVIEW_BASE"
           git cat-file -e "$REVIEW_HEAD^{commit}"
+      # Isolate npm's global binaries before the Action installs packages. The
+      # trusted adapter then starts the key-bearing relay in the Action's proxy
+      # startup step, after installs and before Codex loses sudo privileges.
+      - name: Prepare trusted proxy adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          adapter_bin="$RUNNER_TEMP/codex-review-adapters"
+          npm_prefix="$RUNNER_TEMP/codex-review-npm"
+          mkdir -p "$adapter_bin" "$npm_prefix"
+          ln -s "$GITHUB_WORKSPACE/.github/scripts/codex-cli-wrapper.sh" \
+            "$adapter_bin/codex"
+          ln -s "$GITHUB_WORKSPACE/.github/scripts/ollama-proxy-wrapper.sh" \
+            "$adapter_bin/codex-responses-api-proxy"
+          printf 'NPM_CONFIG_PREFIX=%s\n' "$npm_prefix" >> "$GITHUB_ENV"
+          printf '%s\n' "$adapter_bin" >> "$GITHUB_PATH"
       # Keep Codex last. The gate runs on a separate fresh runner without the API key.
       - name: Independently review the PR diff
         id: codex
