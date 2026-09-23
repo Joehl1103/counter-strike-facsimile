@@ -98,7 +98,9 @@ jobs:
           model: gpt-oss:120b
           permission-profile: ':read-only'
           safety-strategy: drop-sudo
-          codex-args: '["--ephemeral"]'
+          # Ollama's Responses endpoint rejects Codex's native web_search tool.
+          # This reviewer inspects only the checked-out diff and needs no search.
+          codex-args: '["--ephemeral","-c","web_search=\"disabled\""]'
           prompt: |
             You are the independent code reviewer, not the implementation agent.
             Review head ${{ github.event.pull_request.head.sha }} against base
