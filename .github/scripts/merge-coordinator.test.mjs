@@ -68,6 +68,15 @@ function createGithub(snapshots, changes = {}) {
   };
 }
 
+test('an empty PR queue has no candidate to inspect or mutate', async () => {
+  const github = createGithub([]);
+
+  const result = await coordinate({ github, repository });
+
+  assert.deepEqual(result.results, []);
+  assert.equal(github.calls.some((call) => ['update', 'merge', 'comment'].includes(call[0])), false);
+});
+
 test('merges the first fully current candidate with exact expected identity', async () => {
   const github = createGithub([snapshot(1)]);
   const result = await coordinate({ github, repository, triage: async () => assert.fail('green PRs never need triage') });
@@ -91,6 +100,49 @@ test('updates one clean behind candidate and returns before attempting a merge',
   assert.equal(result.results.at(-1).outcome, 'updated');
   assert.deepEqual(github.calls.find((call) => call[0] === 'update'), ['update', 1, head]);
   assert.equal(github.calls.some((call) => call[0] === 'merge'), false);
+});
+
+test('updates a behind branch even when GitHub retains its old PR base SHA', async () => {
+  const currentMainSha = 'd'.repeat(40);
+  const staleBranch = snapshot(1, { baseSha: currentMainSha, behind: true });
+  const github = createGithub([staleBranch]);
+
+  const result = await coordinate({ github, repository });
+
+  assert.deepEqual(result.results, [{ number: 1, outcome: 'updated', head }]);
+  assert.deepEqual(github.calls.find((call) => call[0] === 'update'), ['update', 1, head]);
+  assert.equal(github.calls.some((call) => call[0] === 'merge'), false);
+});
+
+test('refuses a stale-branch update if main changes between snapshots', async () => {
+  const firstSnapshot = snapshot(1, { baseSha: 'd'.repeat(40), behind: true });
+  const changedMainSnapshot = snapshot(1, { baseSha: 'e'.repeat(40), behind: true });
+  const github = createGithub([firstSnapshot], {
+    snapshotSequence: [firstSnapshot, changedMainSnapshot],
+  });
+
+  const result = await coordinate({ github, repository });
+
+  assert.equal(result.results[0].reasonCode, 'stale_before_update');
+  assert.equal(github.calls.some((call) => call[0] === 'update'), false);
+});
+
+test('reports a current branch with stale PR base metadata instead of merging', async () => {
+  const currentMainSha = 'd'.repeat(40);
+  const staleMetadata = snapshot(1, { baseSha: currentMainSha });
+  const github = createGithub([staleMetadata]);
+
+  const firstResult = await coordinate({ github, repository });
+  const secondResult = await coordinate({ github, repository });
+
+  assert.deepEqual(firstResult.results, [{
+    number: 1,
+    outcome: 'blocked',
+    reasonCode: 'stale_base_metadata',
+  }]);
+  assert.deepEqual(secondResult.results, firstResult.results);
+  assert.equal(github.calls.filter((call) => call[0] === 'comment').length, 1);
+  assert.equal(github.calls.some((call) => ['update', 'merge'].includes(call[0])), false);
 });
 
 test('pending checks wait quietly and do not call the model', async () => {
@@ -155,6 +207,21 @@ test('a changed head or base after the action decision prevents the write and al
   assert.equal(result.results[0].reasonCode, 'stale_before_merge');
   assert.equal(result.results[1].outcome, 'merged');
   assert.equal(github.calls.some((call) => call[0] === 'merge' && call[1] === 1), false);
+});
+
+test('refuses a final merge if the PR base metadata changes between snapshots', async () => {
+  const firstSnapshot = snapshot(1);
+  const changedBaseSnapshot = snapshot(1, {
+    pr: { base: { ref: 'main', sha: 'd'.repeat(40) } },
+  });
+  const github = createGithub([firstSnapshot], {
+    snapshotSequence: [firstSnapshot, changedBaseSnapshot, changedBaseSnapshot],
+  });
+
+  const result = await coordinate({ github, repository });
+
+  assert.equal(result.results[0].reasonCode, 'stale_before_merge');
+  assert.equal(github.calls.some((call) => call[0] === 'merge'), false);
 });
 
 test('weakened effective rules prevent all writes', async () => {

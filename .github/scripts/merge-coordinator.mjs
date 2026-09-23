@@ -26,10 +26,14 @@ function candidateIdentity(snapshot) {
   };
 }
 
-function sameIdentity(left, right) {
+function sameCandidateAndMain(left, right) {
   return left.pr.number === right.pr.number &&
     left.pr.head.sha === right.pr.head.sha && left.pr.base.sha === right.pr.base.sha &&
-    left.baseSha === right.baseSha && right.baseSha === right.pr.base.sha;
+    left.baseSha === right.baseSha;
+}
+
+function sameIdentity(left, right) {
+  return sameCandidateAndMain(left, right) && right.baseSha === right.pr.base.sha;
 }
 
 function validIdentity(snapshot) {
@@ -100,10 +104,23 @@ async function validateRulesBeforeWrite(github) {
   validateEffectiveRules(await github.effectiveRules());
 }
 
-async function freshSnapshot(github, priorSnapshot) {
+async function readCurrentSnapshot(github, priorSnapshot) {
   const currentSnapshot = await github.snapshot(priorSnapshot.pr.number);
   assert.ok(validIdentity(currentSnapshot), 'GitHub returned a malformed live PR snapshot.');
-  assert.ok(sameIdentity(priorSnapshot, currentSnapshot), 'PR head or base changed during coordination.');
+  return currentSnapshot;
+}
+
+async function freshSnapshot(github, priorSnapshot) {
+  const currentSnapshot = await readCurrentSnapshot(github, priorSnapshot);
+  assert.ok(sameIdentity(priorSnapshot, currentSnapshot),
+    'PR head or base changed during coordination.');
+  return currentSnapshot;
+}
+
+async function freshUpdateSnapshot(github, priorSnapshot) {
+  const currentSnapshot = await readCurrentSnapshot(github, priorSnapshot);
+  assert.ok(sameCandidateAndMain(priorSnapshot, currentSnapshot),
+    'PR head or current main changed before the branch update.');
   return currentSnapshot;
 }
 
@@ -112,6 +129,7 @@ const humanReasons = {
   candidate_evidence_invalid: 'Verify the matching Linear link and mark each approved Acceptance Criteria item complete with evidence.',
   conflict_requires_repair: 'Resolve the conflicting changes and push the repair; fresh checks and independent review will run.',
   branch_update_refused: 'GitHub refused the branch update. Inspect branch permissions or resolve the conflict, then push a repaired candidate.',
+  stale_base_metadata: 'The PR base SHA does not match current main even though the branch is not behind. Inspect GitHub PR metadata before retrying.',
   triage_unavailable: 'The blocker could not be classified. Inspect the failed checks and model configuration.',
   triage_needs_human: 'Inspect the failed checks and repair the code or configuration; the evidence did not justify an automatic retry.',
   retry_not_permitted: 'A substantive failure needs a repair. An infrastructure retry cannot resolve every failing check.',
@@ -200,7 +218,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
       continue;
     }
 
-    if (snapshot.baseSha !== snapshot.pr.base.sha || snapshot.pr.mergeable == null) {
+    if (snapshot.pr.mergeable == null) {
       results.push({ number, outcome: 'waiting', reasonCode: 'mergeability_pending' });
       continue;
     }
@@ -214,7 +232,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
 
     if (snapshot.behind === true) {
       try {
-        const current = await freshSnapshot(github, snapshot);
+        const current = await freshUpdateSnapshot(github, snapshot);
         validateReadyCandidate(current, repository);
         assert.equal(current.behind, true, 'PR is no longer behind main.');
         await validateRulesBeforeWrite(github);
@@ -229,6 +247,14 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
         results.push(blockedResult(number, 'stale_before_update'));
         continue;
       }
+    }
+
+    // GitHub can retain an older PR base SHA while its branch is behind main.
+    // Only the update path may accept it; a current branch needs human inspection.
+    if (snapshot.baseSha !== snapshot.pr.base.sha) {
+      await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'stale_base_metadata' });
+      results.push(blockedResult(number, 'stale_base_metadata'));
+      continue;
     }
 
     const failures = failedChecks(snapshot);
