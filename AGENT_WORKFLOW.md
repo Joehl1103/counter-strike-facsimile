@@ -5,7 +5,8 @@ matching Linear issue URL and approved Acceptance Criteria checklist in the body
 Keep incomplete work in draft. Do not invent acceptance evidence or close Linear
 issues automatically. Within user-authorized work, create/edit PRs and their
 verifiable Acceptance Criteria without a separate approval, as specified in
-[AGENTS.md](AGENTS.md).
+[AGENTS.md](AGENTS.md). Obtain task authorization before starting new scope;
+this PR-editing exception does not alter review, merge or publication gates.
 
 Repository checks, Game checks and Independent Codex review are required.
 Independent review must cover the exact candidate and current main. The trusted
