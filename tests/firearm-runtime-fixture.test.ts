@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { assertFirearmRuntimeObservation } from '../scripts/firearm-runtime-observation.mjs';
+import { assertFirearmRuntimeObservation, assertFirearmEarlyEquipRejection } from '../scripts/firearm-runtime-observation.mjs';
 import {
   FIREARM_RUNTIME_FIXTURE_SEED,
   FIREARM_RUNTIME_FIXTURES,
@@ -69,8 +69,8 @@ function shotWithHitGroup(hitGroup: string) {
     details: { rays: [{
       pellet: 0, targetId: 't:0', traceResult: 'target', rawDamage: 80,
       hitGroup, exits: 0,
-      damageInputBefore: { ...beforeTarget },
-      damageResolved: { ...beforeTarget, health: 20 },
+      damageInputBefore: { health: 100, armor: 0, helmet: false },
+      damageResolved: { health: 20, armor: 0, helmet: false },
     }] },
   };
 }
@@ -107,4 +107,53 @@ void test('blocked multi-wall controls require each named collision and unchange
   assert.throws(() => assertFirearmRuntimeObservation(fixture, beforeTarget, shot), /missing required wall/);
   shot.details.rays = [walls[0], walls[0]];
   assert.throws(() => assertFirearmRuntimeObservation(fixture, beforeTarget, shot), /unexpected or reused collider/);
+});
+
+
+void test('lethal shotgun pellets remain a valid sequential damage aggregate', () => {
+  const fixture = { ...directFixture, weapon: 'shotgun' };
+  const shot = shotWithHitGroup('torso');
+  shot.target.health = 0;
+  shot.details.rays[0].damageResolved.health = 0;
+  shot.details.rays.push({
+    ...shot.details.rays[0], pellet: 1, hitGroup: 'leg',
+    damageInputBefore: { health: 0, armor: 0, helmet: false },
+    damageResolved: { health: 0, armor: 0, helmet: false },
+  });
+  assert.deepEqual(
+    assertFirearmRuntimeObservation(fixture, beforeTarget, shot).observedHitGroups,
+    ['torso', 'leg'],
+  );
+  shot.details.rays[1].damageInputBefore.health = 100;
+  assert.throws(() => assertFirearmRuntimeObservation(fixture, beforeTarget, shot), /pellet damage chain/);
+});
+
+void test('a trace that exits the blocking wall and subsequently misses is not wall rejection evidence', () => {
+  const fixture = { weapon: 'rifle', material: 'wood', wallCount: 2, hitGroup: 'torso' };
+  const rays = [1, 2].map((wallNumber) => ({
+    pellet: 0, collider: `jkh-131-wood-slab-${wallNumber}`,
+    traceResult: 'rejected', worldDistance: wallNumber * 3, exitDistance: wallNumber * 3 + 0.2,
+  }));
+  const shot = { target: { ...beforeTarget }, details: { rays: [...rays, { pellet: 0, result: 'no-hit' }] } };
+  assert.throws(() => assertFirearmRuntimeObservation(fixture, beforeTarget, shot), /continued beyond its final wall/);
+});
+
+
+void test('early fire must be inside the equip lock and leave target and ballistic count unchanged', () => {
+  const before = {
+    event: { input: 'Digit1', outcome: 'committed', simulationNowMs: 5000 },
+    player: { activeWeapon: 'rifle', equipReadyAtMs: 5520, ammo: { magazine: 30, reserve: 90 }, ballistic: { shots: 0 } },
+    target: { ...beforeTarget },
+  };
+  const after = structuredClone(before);
+  after.event = { input: 'KeyF', outcome: 'rejected', simulationNowMs: 5010 };
+  assert.doesNotThrow(() => assertFirearmEarlyEquipRejection(before, after, 'rifle', 'Digit1'));
+  after.event.simulationNowMs = 5520;
+  assert.throws(() => assertFirearmEarlyEquipRejection(before, after, 'rifle', 'Digit1'), /missed the equip-lock window/);
+  after.event.simulationNowMs = 5010;
+  after.target.health = 90;
+  assert.throws(() => assertFirearmEarlyEquipRejection(before, after, 'rifle', 'Digit1'), /changed target state/);
+  after.target.health = 100;
+  after.player.ballistic.shots = 1;
+  assert.throws(() => assertFirearmEarlyEquipRejection(before, after, 'rifle', 'Digit1'), /changed ballistic shot count/);
 });

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { assertFirearmRuntimeObservation } from './firearm-runtime-observation.mjs';
+import { assertFirearmRuntimeObservation, assertFirearmEarlyEquipRejection } from './firearm-runtime-observation.mjs';
 import { platform, release, arch } from 'node:os';
 import { chromium } from 'playwright';
 import { createHash } from 'node:crypto';
@@ -173,8 +173,7 @@ async function runCase(caseId) {
     );
     const earlyFire = await capture('early-fire');
     result.events.push(earlyFire);
-    assert.equal(earlyFire.receipt.latest.event.outcome, 'rejected');
-    assert.deepEqual(earlyFire.receipt.latest.player.ammo, beforeEarlyFire.player.ammo, 'early fire changed ammo');
+    assertFirearmEarlyEquipRejection(beforeEarlyFire, earlyFire.receipt.latest, weapon, key);
     const equipReadyAtMs = equipped.receipt.latest.player.equipReadyAtMs;
     await page.waitForFunction(
       (readyAt) => window.dustlineVisualTools.snapshot().runtime.simulationNowMs >= readyAt,

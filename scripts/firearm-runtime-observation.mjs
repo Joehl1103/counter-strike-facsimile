@@ -23,7 +23,9 @@ export function assertFirearmRuntimeObservation(fixture, beforeTarget, shot) {
     assert.equal(targetRays.length, 0, 'a blocked shot reached the target');
     assert.deepEqual(shot.target, beforeTarget, 'a blocked shot changed target state');
     const requiredWalls = Math.min(fixture.wallCount, wallLimit + 1);
-    const firstPelletWalls = rays.filter((ray) => ray.pellet === 0 && ray.collider);
+    const firstPelletRays = rays.filter((ray) => ray.pellet === 0);
+    const firstPelletWalls = firstPelletRays.filter((ray) => ray.collider);
+    assert.equal(firstPelletRays.at(-1), firstPelletWalls.at(-1), 'blocked trace continued beyond its final wall');
     assert.equal(firstPelletWalls.length, requiredWalls, 'missing required wall collision observations');
     for (const [wallIndex, ray] of firstPelletWalls.entries()) {
       const expectedCollider = `jkh-131-${fixture.material}-slab-${wallIndex + 1}`;
@@ -44,6 +46,7 @@ export function assertFirearmRuntimeObservation(fixture, beforeTarget, shot) {
   if (fixture.weapon !== 'shotgun') {
     assert.equal(damagingRays.length, 1, 'single-bullet shot has multiple target observations');
   }
+  let expectedDamageInput = { health: beforeTarget.health, armor: beforeTarget.armor, helmet: beforeTarget.helmet };
   for (const ray of damagingRays) {
     assert.equal(ray.exits, fixture.wallCount, 'wrong successful penetration exit count');
     const pelletWalls = rays.filter((entry) => entry.pellet === ray.pellet && entry.collider);
@@ -54,7 +57,14 @@ export function assertFirearmRuntimeObservation(fixture, beforeTarget, shot) {
       assert.ok(Number.isFinite(wall.exitDistance) && wall.exitDistance > wall.worldDistance);
     }
     assert.ok(ray.damageInputBefore && ray.damageResolved, 'missing applied damage observation');
-    assert.ok(ray.damageResolved.health < ray.damageInputBefore.health, 'target ray did not reduce health');
+    assert.deepEqual(ray.damageInputBefore, expectedDamageInput, 'pellet damage chain does not match prior target state');
+    assert.ok(ray.damageResolved.health >= 0, 'resolved health is below zero');
+    if (ray.damageInputBefore.health > 0) {
+      assert.ok(ray.damageResolved.health < ray.damageInputBefore.health, 'target ray did not reduce health');
+    } else {
+      assert.equal(ray.damageResolved.health, 0, 'post-lethal pellet revived the target');
+    }
+    expectedDamageInput = ray.damageResolved;
   }
   assert.ok(shot.target.health < beforeTarget.health, 'live target health did not decrease');
   const lastRay = damagingRays.at(-1);
@@ -66,4 +76,18 @@ export function assertFirearmRuntimeObservation(fixture, beforeTarget, shot) {
     observedHitGroups: damagingRays.map((ray) => ray.hitGroup),
     wallsObserved: fixture.wallCount,
   };
+}
+
+/** Prove the rejected input landed inside equip lock without changing combat state. */
+export function assertFirearmEarlyEquipRejection(before, after, weapon, selectionKey) {
+  assert.equal(before.event.input, selectionKey, 'unexpected equip input');
+  assert.equal(before.event.outcome, 'committed', 'equip was not committed');
+  assert.equal(before.player.activeWeapon, weapon, 'wrong weapon equipped');
+  assert.equal(after.event.input, 'KeyF');
+  assert.equal(after.event.outcome, 'rejected');
+  assert.ok(after.event.simulationNowMs < before.player.equipReadyAtMs, 'early fire missed the equip-lock window');
+  assert.equal(after.player.activeWeapon, weapon);
+  assert.deepEqual(after.player.ammo, before.player.ammo, 'early fire changed ammo');
+  assert.deepEqual(after.target, before.target, 'early fire changed target state');
+  assert.equal(after.player.ballistic.shots, before.player.ballistic.shots, 'early fire changed ballistic shot count');
 }
