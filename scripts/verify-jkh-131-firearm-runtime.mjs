@@ -143,7 +143,8 @@ async function runCase(caseId) {
     assert.equal(setup.viewport.fixedStepMs, 10);
     const weapon = setup.fixture.weapon;
     const key = ['rifle', 'carbine', 'smg', 'shotgun', 'sniper'].includes(weapon) ? 'Digit1' : 'Digit2';
-    await page.waitForFunction(() => window.dustlineVisualTools.snapshot().runtime.simulationNowMs >= 5_000, null, { timeout: 60_000 });
+    // Software rendering advances the unchanged simulation slowly on the worker.
+    await page.waitForFunction(() => window.dustlineVisualTools.snapshot().runtime.simulationNowMs >= 5_000, null, { timeout: 180_000 });
     const selectionSequence = setup.event.sequence;
     await page.keyboard.press(key);
     await page.waitForFunction(
