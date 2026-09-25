@@ -269,7 +269,7 @@ describe('planner and gate CLI integration', () => {
 
   }
 
-  test('regenerates an identical manifest across checkouts and validates downloaded artifacts', async (context) => {
+  test('plans, renders and gates the recorded base/head from a later trusted main checkout', async (context) => {
     const input = fixture(context, {}, { 'app.ts': 'candidate value\n' });
     const plannerPath = fileURLToPath(new URL('./review-plan.mjs', import.meta.url));
     const gatePath = fileURLToPath(new URL('./review-gate.mjs', import.meta.url));
@@ -282,8 +282,22 @@ describe('planner and gate CLI integration', () => {
     input.git('checkout', '-q', input.head);
     assert.deepEqual(await buildPlan(input), plan);
     input.git('checkout', '-q', input.base);
+    writeFileSync(join(input.repoDir, 'app.ts'), 'later trusted main value\n');
+    input.git('add', 'app.ts');
+    input.git('commit', '-qm', 'later trusted main');
+    const trustedSha = input.git('rev-parse', 'HEAD').trim();
+    assert.notEqual(trustedSha, input.base);
+    assert.notEqual(trustedSha, input.head);
+    input.git('merge-base', '--is-ancestor', input.base, trustedSha);
+    execFileSync(process.execPath, [plannerPath, 'plan', input.base, input.head, input.repoDir], { env: environment });
+    assert.deepEqual(JSON.parse(readFileSync(manifestPath, 'utf8')), plan);
     execFileSync(process.execPath, [plannerPath, 'render', input.base, input.head, input.repoDir, 'chunk-001', plan.digest], { env: environment });
-    assert.ok(existsSync(join(input.repoDir, '.codex-review-input/prompt.txt')));
+    const prompt = readFileSync(join(input.repoDir, '.codex-review-input/prompt.txt'), 'utf8');
+    assert.ok(prompt.includes(`Review head ${input.head} against base ${input.base}`));
+    assert.match(prompt, /working tree is trusted main code/);
+    assert.match(prompt, /NOT the candidate and is not necessarily the reviewed base/);
+    assert.equal(readFileSync(join(input.repoDir, '.codex-review-input/head/app.ts'), 'utf8'), 'candidate value\n');
+    assert.equal(readFileSync(join(input.repoDir, 'app.ts'), 'utf8'), 'later trusted main value\n');
 
     const reportsDir = join(input.repoDir, 'reports');
     mkdirSync(reportsDir);
@@ -300,6 +314,10 @@ describe('planner and gate CLI integration', () => {
       cwd: input.repoDir, env: { ...gateEnvironment, ...changes }, encoding: 'utf8',
     });
     assert.equal(runGate().status, 0);
+    const summary = readFileSync(gateEnvironment.GITHUB_STEP_SUMMARY, 'utf8');
+    assert.ok(summary.includes(`"reviewed_base": "${input.base}"`));
+    assert.ok(summary.includes(`"reviewed_head": "${input.head}"`));
+    assert.equal(input.git('rev-parse', 'HEAD').trim(), trustedSha);
     assert.match(readFileSync(gateEnvironment.GITHUB_STEP_SUMMARY, 'utf8'), /&quot;|Inspected|Checked/);
     assert.equal(runGate({ REVIEW_DIGEST: 'wrong' }).status, 1);
     assert.equal(runGate({ GITHUB_RUN_ATTEMPT: '3' }).status, 1);
