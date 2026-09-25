@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -208,61 +209,65 @@ describe('nested untrusted HEAD packet', () => {
 
 
 describe('planner and gate CLI integration', () => {
-  test('overflow with a skipped matrix fails the gate and published status, listing uncovered files', async (context) => {
-    const input = fixture(context, {}, {
-      'first.ts': 'const first = true;\n'.repeat(30),
-      'second.ts': 'const second = true;\n'.repeat(30),
-    });
-    const plan = await buildPlan({ ...input, budget: 300, maxChunks: 1 });
-    assert.equal(plan.overflow, true);
-    const reportsDir = join(input.repoDir, 'reports');
-    mkdirSync(reportsDir);
-    const summaryPath = join(input.repoDir, 'summary.txt');
-    const gatePath = fileURLToPath(new URL('./review-gate.mjs', import.meta.url));
-    const gate = spawnSync(process.execPath, [gatePath], {
-      cwd: input.repoDir, encoding: 'utf8',
-      env: { ...process.env, REVIEW_HEAD: input.head, REVIEW_BASE: input.base,
-        REVIEW_CHUNK_BUDGET: '300', REVIEW_MAX_CHUNKS: '1', REVIEW_DIGEST: plan.digest,
-        REVIEW_REPORTS: reportsDir, REVIEW_RESULT: 'skipped', PLAN_RESULT: 'success',
-        GATE_PREPARATION_RESULT: 'success', GITHUB_STEP_SUMMARY: summaryPath },
-    });
-    assert.equal(gate.status, 1);
-    const summary = readFileSync(summaryPath, 'utf8');
-    assert.match(summary, /"complete": false/);
-    assert.match(summary, /Plan overflow/);
-    for (const path of new Set(plan.uncovered.map((item) => item.path))) {
-      assert.ok(summary.includes(path), `Summary must name uncovered file ${path}`);
-    }
+  for (const scenario of ['overflow', 'asset-only']) {
+    test(`${scenario} with a skipped matrix fails the gate and published status`, async (context) => {
+      const files = scenario === 'overflow' ? {
+        'first.ts': 'const first = true;\n'.repeat(30),
+        'second.ts': 'const second = true;\n'.repeat(30),
+      } : { 'image.png': pngBytes };
+      const input = fixture(context, {}, files);
+      const plan = await buildPlan({ ...input, budget: 300, maxChunks: 1 });
+      assert.equal(plan.overflow, scenario === 'overflow');
+      const reportsDir = join(input.repoDir, 'reports');
+      mkdirSync(reportsDir);
+      const summaryPath = join(input.repoDir, 'summary.txt');
+      const gatePath = fileURLToPath(new URL('./review-gate.mjs', import.meta.url));
+      const gate = spawnSync(process.execPath, [gatePath], {
+        cwd: input.repoDir, encoding: 'utf8',
+        env: { ...process.env, GITHUB_RUN_ID: '123456', GITHUB_RUN_ATTEMPT: '2', REVIEW_HEAD: input.head, REVIEW_BASE: input.base,
+          REVIEW_CHUNK_BUDGET: '300', REVIEW_MAX_CHUNKS: '1', REVIEW_DIGEST: plan.digest,
+          REVIEW_REPORTS: reportsDir, REVIEW_RESULT: 'skipped', PLAN_RESULT: 'success',
+          GATE_PREPARATION_RESULT: 'success', GITHUB_STEP_SUMMARY: summaryPath },
+      });
+      assert.equal(gate.status, 1);
+      const summary = readFileSync(summaryPath, 'utf8');
+      assert.match(summary, /"complete": false/);
+      assert.match(summary, scenario === 'overflow' ? /Plan overflow/ : /asset-only change requires human review/);
+      for (const path of new Set(plan.uncovered.map((item) => item.path))) {
+        assert.ok(summary.includes(path), `Summary must name uncovered file ${path}`);
+      }
 
-    // Execute the actual workflow publisher with a local GitHub stub. No network.
-    const workflow = readFileSync(new URL('../workflows/codex-review.yml', import.meta.url), 'utf8');
-    const marker = '          script: |\n';
-    const script = workflow.slice(workflow.lastIndexOf(marker) + marker.length)
-      .split('\n').map((line) => line.slice(12)).join('\n');
-    const original = { number: 9, head: { sha: input.head }, base: { sha: input.base } };
-    const statuses = [];
-    const failures = [];
-    const validationOutcome = gate.status === 0 ? 'success' : 'failure';
-    await runInNewContext(`(async () => { ${script} })()`, {
-      process: { env: { VALIDATION_RESULT: validationOutcome } },
-      context: { payload: { pull_request: original }, repo: { owner: 'owner', repo: 'repo' },
-        serverUrl: 'https://github.example', runId: 1 },
-      github: { rest: {
-        pulls: { get: async () => ({ data: original }) },
-        repos: { createCommitStatus: async (status) => {
-          statuses.push(status);
+      // Execute the actual workflow publisher with a local GitHub stub. No network.
+      const workflow = readFileSync(new URL('../workflows/codex-review.yml', import.meta.url), 'utf8');
+      const marker = '          script: |\n';
+      const script = workflow.slice(workflow.lastIndexOf(marker) + marker.length)
+        .split('\n').map((line) => line.slice(12)).join('\n');
+      const original = { number: 9, head: { sha: input.head }, base: { sha: input.base } };
+      const statuses = [];
+      const failures = [];
+      const validationOutcome = gate.status === 0 ? 'success' : 'failure';
+      await runInNewContext(`(async () => { ${script} })()`, {
+        process: { env: { VALIDATION_RESULT: validationOutcome } },
+        context: { payload: { pull_request: original }, repo: { owner: 'owner', repo: 'repo' },
+          serverUrl: 'https://github.example', runId: 1 },
+        github: { rest: {
+          pulls: { get: async () => ({ data: original }) },
+          repos: { createCommitStatus: async (status) => {
+            statuses.push(status);
+          } },
         } },
-      } },
-      core: { setFailed: (message) => {
-        failures.push(message);
-      } },
+        core: { setFailed: (message) => {
+          failures.push(message);
+        } },
+      });
+      assert.equal(statuses.length, 1);
+      assert.equal(statuses[0].context, 'Independent Codex review');
+      assert.equal(statuses[0].state, 'failure');
+      assert.equal(statuses[0].sha, input.head);
+      assert.equal(failures.length, 1);
     });
-    assert.equal(statuses.length, 1);
-    assert.equal(statuses[0].context, 'Independent Codex review');
-    assert.equal(statuses[0].state, 'failure');
-    assert.equal(statuses[0].sha, input.head);
-    assert.equal(failures.length, 1);
-  });
+
+  }
 
   test('regenerates an identical manifest across checkouts and validates downloaded artifacts', async (context) => {
     const input = fixture(context, {}, { 'app.ts': 'candidate value\n' });
@@ -283,10 +288,12 @@ describe('planner and gate CLI integration', () => {
     const reportsDir = join(input.repoDir, 'reports');
     mkdirSync(reportsDir);
     writeFileSync(join(reportsDir, 'chunk-001.json'), JSON.stringify({
-      reviewed_head: input.head, reviewed_base: input.base, chunk_id: 'chunk-001',
+      run_id: '123456', run_attempt: '2', plan_digest: plan.digest, chunk_id: 'chunk-001',
+      report_text: JSON.stringify({ reviewed_head: input.head, reviewed_base: input.base, chunk_id: 'chunk-001',
       complete: true, verdict: 'pass', summary: 'Checked.', findings: [], limitations: [],
+      }),
     }));
-    const gateEnvironment = { ...process.env, REVIEW_HEAD: input.head, REVIEW_BASE: input.base,
+    const gateEnvironment = { ...process.env, GITHUB_RUN_ID: '123456', GITHUB_RUN_ATTEMPT: '2', REVIEW_HEAD: input.head, REVIEW_BASE: input.base,
       REVIEW_DIGEST: plan.digest, REVIEW_REPORTS: reportsDir, REVIEW_RESULT: 'success', PLAN_RESULT: 'success',
       GATE_PREPARATION_RESULT: 'success', GITHUB_STEP_SUMMARY: join(input.repoDir, 'summary.txt') };
     const runGate = (changes = {}) => spawnSync(process.execPath, [gatePath], {
@@ -295,6 +302,8 @@ describe('planner and gate CLI integration', () => {
     assert.equal(runGate().status, 0);
     assert.match(readFileSync(gateEnvironment.GITHUB_STEP_SUMMARY, 'utf8'), /&quot;|Inspected|Checked/);
     assert.equal(runGate({ REVIEW_DIGEST: 'wrong' }).status, 1);
+    assert.equal(runGate({ GITHUB_RUN_ATTEMPT: '3' }).status, 1);
+    assert.equal(runGate({ GITHUB_RUN_ID: '654321' }).status, 1);
     assert.equal(runGate({ GATE_PREPARATION_RESULT: 'failure' }).status, 1);
     assert.equal(runGate({ REVIEW_RESULT: 'failure' }).status, 1);
   });
@@ -328,7 +337,8 @@ describe('planner and gate CLI integration', () => {
 describe('adversarial review coverage', () => {
   function skipMatrix(plan) {
     return aggregateReviews({ plan, head: plan.head, base: plan.base,
-      reports: [], planResult: 'success', reviewerResult: 'skipped' });
+      reports: [], planResult: 'success', reviewerResult: 'skipped',
+      runId: '123456', runAttempt: '2', planDigest: plan.digest });
   }
 
   test('a NUL byte in JavaScript cannot turn a code-only PR into a passing binary-only PR', async (context) => {
@@ -472,8 +482,10 @@ describe('asset signature and mode enforcement', () => {
     assert.equal(plan.chunks.length, 0);
     assert.ok(plan.skipped.every((file) => file.headMode === '100644' && file.headPrefixHex));
     const result = aggregateReviews({ plan, head: input.head, base: input.base,
-      reports: [], planResult: 'success', reviewerResult: 'skipped' });
-    assert.equal(result.complete, true);
+      reports: [], planResult: 'success', reviewerResult: 'skipped',
+      runId: '123456', runAttempt: '2', planDigest: plan.digest });
+    assert.equal(result.complete, false);
+    assert.equal(result.summary, 'asset-only change requires human review');
   });
 
   test('bad magic, truncated headers, cross-format signatures and unchecked extensions fail closed', async (context) => {
@@ -623,5 +635,86 @@ describe('entire HEAD context packet', () => {
     for (const path of ['/outside.ts', '../outside.ts', 'safe/../../outside.ts', 'C:/outside.ts']) {
       assert.throws(() => parseNumstat(`1\t0\t${path}\0`), /Unsafe packet path/);
     }
+  });
+});
+
+describe('skipped asset defense in depth', () => {
+  test('the short BMP JavaScript polyglot is uncovered even below the ASCII-run threshold', async (context) => {
+    const input = fixture(context, {}, { 'payload.bmp': 'BM=0; console.log("code ran"); /*\0*/' });
+    const plan = await buildPlan(input);
+    assert.equal(plan.skipped.length, 0);
+    assert.equal(plan.overflow, true);
+    assert.equal(plan.uncovered[0].reason, 'unreviewable_binary');
+  });
+
+  test('every specified code token in a 512-byte printable run after magic rejects an asset', async (context) => {
+    const tokens = ['require(', 'import ', 'eval(', 'function', '=>', '#!/', '<script', 'child_process', 'exec('];
+    const files = Object.fromEntries(tokens.map((token, index) => [`payload-${index}.png`,
+      Buffer.concat([assetHeaders.png, Buffer.from(token.padEnd(512, ' ')), Buffer.from([0])])]));
+    const input = fixture(context, {}, files);
+    const plan = await buildPlan(input);
+    assert.equal(plan.skipped.length, 0);
+    assert.equal(plan.overflow, true);
+    assert.deepEqual(plan.uncovered.map((file) => file.path).sort(), Object.keys(files).sort());
+  });
+
+  test('scans later runs through byte 65536 but bounds scanning and requires a long token-bearing run', async (context) => {
+    const longCode = Buffer.from('require('.padEnd(512, ' '));
+    const files = {
+      'at-limit.png': Buffer.concat([pngBytes, Buffer.alloc(65536 - pngBytes.length - 512), longCode]),
+      'past-limit.png': Buffer.concat([pngBytes, Buffer.alloc(65536 - pngBytes.length), longCode]),
+      'short.png': Buffer.concat([pngBytes, longCode.subarray(0, 511), Buffer.from([0])]),
+      'short.gif': Buffer.concat([assetHeaders.gif, longCode.subarray(0, 511), Buffer.from([0])]),
+      'non-code.png': Buffer.concat([pngBytes, Buffer.from('metadata'.padEnd(512, ' '))]),
+      'split-run.png': Buffer.concat([pngBytes, longCode.subarray(0, 256), Buffer.from([0]), longCode.subarray(256)]),
+    };
+    const input = fixture(context, {}, files);
+    const plan = await buildPlan(input);
+    assert.deepEqual(plan.uncovered.map((file) => file.path), ['at-limit.png']);
+    assert.deepEqual(plan.skipped.map((file) => file.path).sort(),
+      ['non-code.png', 'past-limit.png', 'short.gif', 'short.png', 'split-run.png']);
+    for (const entry of plan.skipped) {
+      assert.equal(entry.sha256, createHash('sha256').update(files[entry.path]).digest('hex'));
+    }
+  });
+
+
+  test('unchanged assets with code-like payloads cannot hide in the context skip list', async (context) => {
+    const input = fixture(context, { 'existing.bmp': 'BM=0; console.log("code ran"); /*\0*/' },
+      { 'loader.js': 'require("./existing.bmp");\n' });
+    const plan = await buildPlan(input);
+    assert.equal(plan.overflow, true);
+    assert.equal(plan.uncovered.find((entry) => entry.path === 'existing.bmp').reason, 'unreviewable_binary');
+    assert.notEqual(plan.context.find((entry) => entry.path === 'existing.bmp').reason, 'asset_binary');
+  });
+
+  test('each prompt inventories changed and unchanged skipped assets with git-blob SHA-256 and code-loader rules', async (context) => {
+    const before = { 'unchanged.png': pngBytes };
+    const changedAsset = Buffer.concat([pngBytes, Buffer.from('metadata')]);
+    const input = fixture(context, before, { 'changed.png': changedAsset,
+      'loader.js': 'require("./changed.png");\n'.repeat(30) });
+    // Dirty working-tree content must never influence the evidence.
+    writeFileSync(join(input.repoDir, 'unchanged.png'), 'not the candidate');
+    const plan = await buildPlan({ ...input, budget: 400 });
+    assert.ok(plan.chunks.length > 1);
+    const skipped = plan.skipped.find((entry) => entry.path === 'changed.png');
+    assert.equal(skipped.sha256, createHash('sha256').update(changedAsset).digest('hex'));
+    assert.equal(skipped.detectedType, 'png');
+    for (const chunk of plan.chunks) {
+      const prompt = renderPrompt(plan, chunk);
+      for (const [path, content] of Object.entries({ ...before, 'changed.png': changedAsset })) {
+        assert.ok(prompt.includes(path));
+        assert.ok(prompt.includes(createHash('sha256').update(content).digest('hex')));
+        assert.ok(prompt.includes(`"size": ${content.length}`));
+      }
+      assert.match(prompt, /"detectedType": "png"/);
+      assert.match(prompt, /code, config, script, workflow, package manifest or loader/);
+      assert.match(prompt, /load\/execute\/eval\/import\/require\/spawn/);
+      assert.match(prompt, /path\/glob matching/);
+      assert.match(prompt, /finding.*changes_requested/);
+      assert.match(prompt, /node x.bmp/);
+      assert.match(prompt, /<script src/);
+    }
+    assert.equal((await buildPlan(input)).skipped[0].sha256, skipped.sha256);
   });
 });

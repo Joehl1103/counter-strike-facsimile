@@ -3,10 +3,10 @@ import { appendFileSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateReview } from './ci-policy.mjs';
-import { buildPlan, DEFAULT_BUDGET, DEFAULT_MAX_CHUNKS, isSkippableAssetBinary } from './review-plan.mjs';
+import { buildPlan, DEFAULT_BUDGET, DEFAULT_MAX_CHUNKS } from './review-plan.mjs';
 
 // Collect every failure so the summary explains all missing or adverse evidence.
-export function aggregateReviews({ plan, reports, head, base, reviewerResult, planResult }) {
+export function aggregateReviews({ plan, reports, head, base, reviewerResult, planResult, runId, runAttempt, planDigest }) {
   const limitations = [];
   const parsedReports = [];
   function requireCondition(condition, message) {
@@ -14,6 +14,10 @@ export function aggregateReviews({ plan, reports, head, base, reviewerResult, pl
       limitations.push(message);
     }
   }
+  requireCondition(typeof runId === 'string' && /^[0-9]+$/.test(runId), 'Missing or invalid trusted run id.');
+  requireCondition(typeof runAttempt === 'string' && /^[0-9]+$/.test(runAttempt), 'Missing or invalid trusted run attempt.');
+  requireCondition(typeof planDigest === 'string' && /^[a-f0-9]{64}$/.test(planDigest) && plan.digest === planDigest,
+    'Regenerated plan digest differs from plan job.');
   requireCondition(planResult === 'success', 'Review planning failed or did not run.');
   requireCondition(plan.head === head && plan.base === base, 'Plan identities do not match the candidate.');
   requireCondition(plan.overflow === false, 'Plan overflow: chunk cap or unreviewable binary content prevents a complete review.');
@@ -26,7 +30,14 @@ export function aggregateReviews({ plan, reports, head, base, reviewerResult, pl
     requireCondition(!observedIds.has(report.id), `Duplicate chunk report: ${report.id}`);
     observedIds.add(report.id);
     try {
-      const parsed = JSON.parse(report.text);
+      const envelope = JSON.parse(report.text);
+      assert.ok(envelope && typeof envelope === 'object' && !Array.isArray(envelope), 'Expected a report envelope.');
+      assert.equal(envelope.run_id, runId, 'Envelope run_id differs from gate run.');
+      assert.equal(envelope.run_attempt, runAttempt, 'Envelope run_attempt differs from gate attempt.');
+      assert.equal(envelope.plan_digest, planDigest, 'Envelope plan_digest differs from plan job.');
+      assert.equal(envelope.chunk_id, report.id, 'Envelope chunk_id does not match its filename.');
+      assert.equal(typeof envelope.report_text, 'string', 'Envelope report_text must be a string.');
+      const parsed = JSON.parse(envelope.report_text);
       parsedReports.push({ id: report.id, report: parsed });
       assert.equal(parsed.chunk_id, report.id, 'Report chunk_id does not match its filename.');
       validateReview(parsed, head, base);
@@ -46,18 +57,8 @@ export function aggregateReviews({ plan, reports, head, base, reviewerResult, pl
   if (plan.chunks.length > 0) {
     requireCondition(reviewerResult === 'success', 'Independent reviewer job failed or did not run.');
   } else {
-    requireCondition(reviewerResult === 'skipped', 'Zero-chunk reviewer must be skipped.');
-    const changedPaths = new Set(plan.files.map((file) => file.path));
-    const skippedPaths = new Set(plan.skipped.map((file) => file.path));
-    const onlyAssetBinaries = plan.files.length > 0 &&
-      plan.files.every(isSkippableAssetBinary) &&
-      plan.skipped.every((entry) => entry.reason === 'asset_binary' && isSkippableAssetBinary(entry));
-    const allChangedFilesSkipped = plan.files.length === plan.skipped.length &&
-      changedPaths.size === skippedPaths.size &&
-      [...changedPaths].every((path) => skippedPaths.has(path));
-    requireCondition(onlyAssetBinaries && allChangedFilesSkipped,
-      'Zero chunks may pass only when every changed file is an allowlisted binary asset outside .github/.');
-    summary = `No model review; skipped asset binaries: ${plan.skipped.map((entry) => entry.path).join(', ')}.`;
+    summary = 'asset-only change requires human review';
+    requireCondition(false, summary);
   }
   const complete = limitations.length === 0;
   return { reviewed_head: head, reviewed_base: base, complete,
@@ -98,7 +99,9 @@ async function cli() {
     assert.equal(plan.digest, process.env.REVIEW_DIGEST, 'Regenerated plan digest differs from plan job.');
     const reports = readReports(process.env.REVIEW_REPORTS);
     result = aggregateReviews({ plan, reports, head, base,
-      reviewerResult: process.env.REVIEW_RESULT, planResult: process.env.PLAN_RESULT });
+      reviewerResult: process.env.REVIEW_RESULT, planResult: process.env.PLAN_RESULT,
+      runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+      planDigest: process.env.REVIEW_DIGEST });
   } catch (error) {
     result = { reviewed_head: head, reviewed_base: base, complete: false,
       verdict: 'changes_requested', limitations: [error.message] };

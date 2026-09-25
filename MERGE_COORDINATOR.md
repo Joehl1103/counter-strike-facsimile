@@ -185,7 +185,7 @@ line); labels identify file, part and HEAD lines. Split parts concatenate to the
 original diff. `REVIEW_CHUNK_BUDGET` and `REVIEW_MAX_CHUNKS` can tune these limits;
 set them identically in all jobs if configuring the workflow. A digest mismatch
 fails closed. The manifest records base/head, files/parts, skipped files with
-HEAD mode/header evidence, context availability, uncovered parts and a SHA-256
+HEAD mode/header evidence and asset blob hashes, context availability, uncovered parts and a SHA-256
 digest. Every matrix leg and the gate regenerate that same manifest from git objects. Overflow
 skips model calls and produces `complete:false`, listing uncovered parts; it never
 silently drops code or publishes a passing status.
@@ -200,9 +200,10 @@ Only a Git-numstat binary file can qualify for an asset skip, and all of these
 conditions are required: allowlisted extension, outside `.github/`, HEAD tree
 mode exactly `100644`, and leading bytes matching the expected format signature.
 The trusted reader retains at most **32 bytes** from `git cat-file`, stopping the
-child process as soon as the prefix arrives; it does not load a whole asset to
-classify its header. The gate rechecks the manifest's mode/header evidence.
-Supported extensions with signature checks are:
+child process as soon as the prefix arrives. For matching assets, a second
+stream hashes the whole git blob with SHA-256 while retaining only its first
+**64 KiB** for inspection. It never buffers the whole asset. The gate independently
+regenerates the manifest and verifies its digest. Supported signature checks are:
 
 - Images: `png`, `jpg`, `jpeg`, `gif`, `webp`, `ico`, `bmp`, `avif`.
 - Audio: `mp3`, `wav`, `ogg`, `flac`, `m4a`; video: `mp4`, `webm`, `mov`.
@@ -222,30 +223,61 @@ receives diff review; asset paths with a non-`100644` HEAD mode fail closed.
 Every unreviewable binary is listed in `uncovered` with reason
 `unreviewable_binary`, sets `overflow: true`, skips the model matrix and fails
 the gate/status. A shell script with a NUL byte and a `.png` suffix cannot use
-the asset exception. Header matching is not full media decoding or provenance
-verification; those remain separate acceptance concerns.
+the asset exception.
+
+As heuristic defense in depth, an otherwise eligible asset is also uncovered if
+its first 64 KiB, after the magic prefix, contains a run of at least 512 printable
+ASCII bytes (`0x20`–`0x7e`) containing `require(`, `import `, `eval(`, `function`,
+`=>`, `#!/`, `<script`, `child_process` or `exec(`. NULs and non-printable bytes
+break a run. A separate short-BMP guard rejects `BM` followed by optional ASCII
+space/tab/newline and `=`, including `BM=0; console.log("code ran"); /*\0*/`.
+These checks also apply to assets omitted from whole-HEAD context. They are
+heuristics, not proof of non-executability: short, obfuscated, or later payloads
+may evade them; legitimate asset metadata may trigger them. Header matching is
+not full media decoding or provenance verification.
+
+Every chunk prompt lists all skipped HEAD assets, including unchanged assets,
+with path, size, detected format and SHA-256 of the complete git blob. Reviewers
+must flag any reviewed code, config, script, workflow, package manifest or loader
+that could load/execute/eval/import/require/spawn an asset or matching path/glob
+as code, and return `changes_requested`. Examples include `node x.bmp`, dynamic
+imports of assets and `<script src="image.png">`. Ordinary media loading is not
+execution as code.
 
 All text changes count toward the chunk budget/cap, including `dist/`, `build/`,
 `coverage/`, `*.min.js`, `*.map`, and deletion diffs of any size. Large deletions
 split normally; nothing is omitted because it exceeds 200 lines. There is no
-generated-file exclusion. A zero-chunk PR may pass only when **every changed file
-is an asset binary with the required HEAD mode and signature**, with an explicit
-summary naming those skipped files. Empty PRs cannot pass. This status is not asset/provenance or game
-acceptance.
+generated-file exclusion. **Zero reviewable chunks always fail**, including
+verified-asset-only and empty PRs, with summary `asset-only change requires human
+review` and a failing commit status. The skipped-file listing remains available
+for human review. This status is not asset/provenance or game acceptance.
 
 Cloud does not support structured-output requests. Each reviewer returns JSON
 with exact head, base and chunk ID, completeness, verdict, summary, findings and
-limitations. Reports use seven-day `codex-review-<chunk id>` artifacts. Rerunning
-a reviewer leg overwrites its previous artifact; the gate still rejects duplicate
-or extra chunk IDs. Downloads use `merge-multiple: true`, so both single-artifact
-and multi-artifact runs produce a flat directory of `chunk-NNN.json` reports.
-The reader rejects directories, symlinks and every other filename; the filename
-ID must equal the report's `chunk_id`, and the set must equal the plan exactly.
+limitations. The trusted persist step wraps the untouched final message in an
+envelope with `run_id`, `run_attempt`, `plan_digest`, `chunk_id`, and `report_text`.
+Reports use seven-day artifacts named
+`codex-review-<run_id>-<run_attempt>-<chunk id>`, with overwrite enabled. The gate
+downloads only `codex-review-${{ github.run_id }}-${{ github.run_attempt }}-*`.
+Downloads use `merge-multiple: true`, so both single-artifact and multi-artifact
+runs produce a flat directory of `chunk-NNN.json` envelopes. The reader rejects
+directories, symlinks and every other filename; envelope and report chunk IDs
+must both equal the filename, and the downloaded set must equal the plan exactly.
+
 [review-gate.mjs](.github/scripts/review-gate.mjs), on a fresh runner without model
-secrets, requires a successful plan and reviewer matrix, no overflow, exactly one
-report per planned chunk and no extra IDs. Each report must pass the existing
-base `validateReview` plus chunk identity: complete, pass, no findings, summary
-and limitations. Missing, duplicated, malformed, adverse or stale reports fail.
+secrets, independently regenerates the plan from base/head git objects and
+requires its digest to equal the plan job's output. Every envelope must match
+that digest and the gate's `GITHUB_RUN_ID`/`GITHUB_RUN_ATTEMPT` before its
+`report_text` is parsed as JSON. It requires a successful plan and reviewer
+matrix, at least one chunk, no overflow, exactly one report per planned chunk
+and no extra IDs. Each report must pass the existing base `validateReview` plus
+chunk identity: complete, pass, no findings, summary and limitations. Missing,
+duplicated, malformed, adverse or stale reports fail.
+
+Use **Re-run all jobs**. A partial **Re-run failed jobs** fails closed when
+unrerun legs have only prior-attempt artifacts: those artifacts are not downloaded
+and their envelopes would also be rejected. Overwrite does not permit reuse
+across attempts. The cost estimate below applies again to every full rerun.
 The reports and skipped/uncovered lists are HTML-escaped in the run summary.
 
 The gate retains the unchanged-head/base recheck and publishes the same single

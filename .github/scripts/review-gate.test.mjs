@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,13 +8,20 @@ import { aggregateReviews, readReports, renderSummary } from './review-gate.mjs'
 
 const head = 'a'.repeat(40);
 const base = 'b'.repeat(40);
-const plan = { files: [], head, base, overflow: false, chunks: [{ id: 'chunk-001' }, { id: 'chunk-002' }], skipped: [], uncovered: [] };
-const report = (chunkId, changes = {}) => JSON.stringify({
+const runId = '123456';
+const runAttempt = '2';
+const planDigest = 'c'.repeat(64);
+const plan = { digest: planDigest, files: [], head, base, overflow: false, chunks: [{ id: 'chunk-001' }, { id: 'chunk-002' }], skipped: [], uncovered: [] };
+const reportText = (chunkId, changes = {}) => JSON.stringify({
   reviewed_head: head, reviewed_base: base, chunk_id: chunkId, complete: true,
   verdict: 'pass', summary: 'Inspected assigned changes.', findings: [], limitations: [], ...changes,
 });
+const report = (chunkId, changes = {}, envelopeChanges = {}) => JSON.stringify({
+  run_id: runId, run_attempt: runAttempt, plan_digest: planDigest, chunk_id: chunkId,
+  report_text: reportText(chunkId, changes), ...envelopeChanges,
+});
 const reports = () => plan.chunks.map((chunk) => ({ id: chunk.id, text: report(chunk.id) }));
-const aggregate = (changes = {}) => aggregateReviews({ plan, reports: reports(), head, base, reviewerResult: 'success', planResult: 'success', ...changes });
+const aggregate = (changes = {}) => aggregateReviews({ runId, runAttempt, planDigest, plan, reports: reports(), head, base, reviewerResult: 'success', planResult: 'success', ...changes });
 
 describe('aggregate independent review gate', () => {
   test('passes exactly one clean report per planned chunk', () => {
@@ -60,34 +68,39 @@ describe('aggregate independent review gate', () => {
     assert.match(JSON.stringify(aggregate({ plan: { ...plan, overflow: true, uncovered: [{ path: 'uncovered.ts' }] } })), /uncovered.ts/);
   });
 
-  test('zero chunks pass only when every changed file is a confirmed allowlisted asset binary', () => {
-    const skipped = [
-      { path: 'photo.png', oldPath: 'photo.png', reason: 'asset_binary', size: 20, added: null, removed: null, headMode: '100644', headPrefixHex: '89504e470d0a1a0a' },
-      { path: 'sound.m4a', oldPath: 'sound.m4a', reason: 'asset_binary', size: 30, added: null, removed: null, headMode: '100644', headPrefixHex: '0000000066747970' },
-    ];
-    const emptyPlan = { ...plan, chunks: [], skipped, files: skipped };
-    const result = aggregate({ plan: emptyPlan, reports: [], reviewerResult: 'skipped' });
-    assert.equal(result.complete, true);
-    assert.match(result.summary, /photo.png/);
-    assert.match(result.summary, /sound.m4a/);
-    for (const changes of [
-      { path: 'code.js', oldPath: 'code.js' }, { path: 'assets/model.bin', oldPath: 'assets/model.bin' },
-      { path: '.github/photo.png', oldPath: '.github/photo.png' },
-      { oldPath: 'code.js' }, { added: 1, removed: 0 }, { reason: 'binary' },
-      { headMode: '100755' }, { headMode: '120000' }, { headMode: '160000' },
-      { headMode: null }, { headPrefixHex: '' }, { headPrefixHex: '23212f62696e2f736800' },
-    ]) {
-      const forgedSkip = { ...skipped[0], ...changes };
-      const invalidPlan = { ...emptyPlan, skipped: [forgedSkip], files: [forgedSkip] };
-      assert.equal(aggregate({ plan: invalidPlan, reports: [], reviewerResult: 'skipped' }).complete, false);
+  test('zero chunks always fail and require human review, even with verified assets', () => {
+    const skipped = [{ path: 'photo.png', oldPath: 'photo.png', reason: 'asset_binary',
+      size: 20, added: null, removed: null, headMode: '100644', headPrefixHex: '89504e470d0a1a0a' }];
+    for (const files of [skipped, []]) {
+      const result = aggregate({ plan: { ...plan, chunks: [], files, skipped: files },
+        reports: [], reviewerResult: 'skipped' });
+      assert.equal(result.complete, false);
+      assert.equal(result.verdict, 'changes_requested');
+      assert.equal(result.summary, 'asset-only change requires human review');
     }
-    for (const invalidPlan of [
-      { ...emptyPlan, files: [...skipped, { path: 'unaccounted.js' }] },
-      { ...emptyPlan, files: [{ ...skipped[0], path: 'other.png' }, skipped[1]] },
-      { ...emptyPlan, uncovered: [{ path: 'bad.js', reason: 'unreviewable_binary' }] },
-      { ...emptyPlan, skipped: [], files: [] },
-    ]) {
-      assert.equal(aggregate({ plan: invalidPlan, reports: [], reviewerResult: 'skipped' }).complete, false);
+  });
+
+  for (const [name, changes] of [
+    ['prior attempt', { run_attempt: '1' }], ['wrong run', { run_id: '987' }],
+    ['wrong digest', { plan_digest: 'd'.repeat(64) }],
+    ['wrong envelope chunk', { chunk_id: 'chunk-002' }],
+    ['wrong inner report chunk', { report_text: reportText('chunk-002') }],
+    ['malformed report text', { report_text: '{not json' }],
+    ['non-string report text', { report_text: {} }],
+    ...['run_id', 'run_attempt', 'plan_digest', 'chunk_id', 'report_text'].map((key) =>
+      [`missing ${key}`, { [key]: undefined }]),
+  ]) {
+    test(`rejects envelope with ${name}`, () => {
+      const result = aggregate({ reports: [{ id: 'chunk-001', text: report('chunk-001', {}, changes) }, reports()[1]] });
+      assert.equal(result.complete, false);
+      assert.equal(result.verdict, 'changes_requested');
+    });
+  }
+
+  test('rejects missing trusted provenance and a plan inconsistent with the expected digest', () => {
+    for (const changes of [{ runId: undefined }, { runAttempt: undefined }, { planDigest: undefined },
+      { plan: { ...plan, digest: 'd'.repeat(64) } }]) {
+      assert.equal(aggregate(changes).complete, false);
     }
   });
 
@@ -104,12 +117,31 @@ describe('aggregate independent review gate', () => {
 
 
 describe('downloaded artifact structure', () => {
-  test('reviewer uploads replace the prior artifact when rerunning a leg', () => {
+  test('trusted workflow persistence wraps the untouched provider message with current provenance', (context) => {
+    const workflow = readFileSync(new URL('../workflows/codex-review.yml', import.meta.url), 'utf8');
+    const persistStep = workflow.slice(workflow.indexOf('      - name: Persist chunk report as data'),
+      workflow.indexOf('      - uses: actions/upload-artifact@'));
+    assert.match(persistStep, /REVIEW_DIGEST: \$\{\{ needs.plan.outputs.digest \}\}/);
+    const script = persistStep.split("node --input-type=module <<'JS'\n")[1].split('          JS')[0]
+      .split('\n').map((line) => line.slice(10)).join('\n');
+    const directory = mkdtempSync(join(tmpdir(), 'review-persist-'));
+    context.after(() => rmSync(directory, { recursive: true, force: true }));
+    const providerText = reportText('chunk-001');
+    execFileSync(process.execPath, ['--input-type=module', '-e', script], { env: {
+      ...process.env, RUNNER_TEMP: directory, GITHUB_RUN_ID: runId, GITHUB_RUN_ATTEMPT: runAttempt,
+      REVIEW_CHUNK: 'chunk-001', REVIEW_DIGEST: planDigest, REVIEW_REPORT: providerText,
+    } });
+    const envelope = JSON.parse(readFileSync(join(directory, 'codex-review-report/chunk-001.json'), 'utf8'));
+    assert.deepEqual(envelope, { run_id: runId, run_attempt: runAttempt, plan_digest: planDigest,
+      chunk_id: 'chunk-001', report_text: providerText });
+  });
+
+  test('reviewer uploads isolate run attempts and allow same-attempt replacement', () => {
     const workflow = readFileSync(new URL('../workflows/codex-review.yml', import.meta.url), 'utf8');
     const uploadStep = workflow.match(/      - uses: actions\/upload-artifact@[\s\S]*?(?=\n  review-gate:)/)?.[0];
     assert.ok(uploadStep, 'Workflow must upload per-chunk reports.');
     assert.match(uploadStep, /          overwrite: true/);
-    assert.match(uploadStep, /          name: codex-review-\$\{\{ matrix.chunk \}\}/);
+    assert.match(uploadStep, /          name: codex-review-\$\{\{ github.run_id \}\}-\$\{\{ github.run_attempt \}\}-\$\{\{ matrix.chunk \}\}/);
   });
 
   test('workflow downloads all chunk reports into one flat directory', () => {
@@ -117,6 +149,7 @@ describe('downloaded artifact structure', () => {
     const downloadStep = workflow.match(/      - uses: actions\/download-artifact@[\s\S]*?(?=\n      - name:)/)?.[0];
     assert.ok(downloadStep);
     assert.match(downloadStep, /          merge-multiple: true/);
+    assert.match(downloadStep, /pattern: codex-review-\$\{\{ github.run_id \}\}-\$\{\{ github.run_attempt \}\}-\*/);
   });
 
   for (const count of [1, 2]) {
