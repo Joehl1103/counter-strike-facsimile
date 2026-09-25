@@ -21,14 +21,17 @@ placeholder key, then drops sudo before inspecting the PR. The relay and
 reviewer never execute candidate code.
 
 Review input is a trusted packet generated from exact `BASE...HEAD` git objects,
-with the assigned diff embedded in the prompt and HEAD context nested under
+with the assigned diff embedded in the prompt and whole-HEAD text context under
 `.codex-review-input/head/`. Chunk reviewers return separate reports; the base
 aggregate gate requires every planned chunk to pass, reading flat `chunk-NNN.json`
-reports. Package-lock/npm-shrinkwrap summaries include integrity changes and
-non-registry URLs; other locks receive full-diff review. All text, including build
-outputs and deletions of any size, counts toward the budget/cap. Only explicit
-allowlisted asset binaries outside `.github/` can be skipped; all other binaries
-are uncovered and fail closed. Zero chunks pass only for allowlisted-binary-only
+reports. All locks receive full-diff review at lowest priority. All text, including
+build outputs and deletions of any size, counts toward the budget/cap. Asset
+binary skips require an allowlisted signature, HEAD mode `100644`, and a path
+outside `.github/`; uncertainty fails closed. Whole-tree context includes unchanged
+callers: regular text only, copied read-only, with 2 MiB per-file and 100 MiB total
+caps. Symlinks are text listings, submodules and other omissions are listed.
+Missing context needed for a decision requires `complete=false`. Zero chunks
+pass only for mode/signature-qualified asset-binary-only
 PRs. Overflow fails closed. The status remains `Independent Codex review` with
 `Reviewed <head> against <base>`. Default 100k-character chunks, cap 60, four in
 parallel: estimate chunks × roughly 3 runner minutes, up to 20 per chunk at

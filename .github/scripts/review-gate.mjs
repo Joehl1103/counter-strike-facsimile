@@ -55,7 +55,7 @@ export function aggregateReviews({ plan, reports, head, base, reviewerResult, pl
     const allChangedFilesSkipped = plan.files.length === plan.skipped.length &&
       changedPaths.size === skippedPaths.size &&
       [...changedPaths].every((path) => skippedPaths.has(path));
-    requireCondition(onlyAssetBinaries && allChangedFilesSkipped && plan.lockSummaries.length === 0,
+    requireCondition(onlyAssetBinaries && allChangedFilesSkipped,
       'Zero chunks may pass only when every changed file is an allowlisted binary asset outside .github/.');
     summary = `No model review; skipped asset binaries: ${plan.skipped.map((entry) => entry.path).join(', ')}.`;
   }
@@ -85,13 +85,13 @@ export function readReports(directory) {
   return reports;
 }
 
-function cli() {
+async function cli() {
   const head = process.env.REVIEW_HEAD;
   const base = process.env.REVIEW_BASE;
   let result;
   try {
     assert.equal(process.env.GATE_PREPARATION_RESULT, 'success', 'Gate checkout, setup or artifact download failed.');
-    const plan = buildPlan({ repoDir: process.cwd(), base, head,
+    const plan = await buildPlan({ repoDir: process.cwd(), base, head,
       budget: Number(process.env.REVIEW_CHUNK_BUDGET ?? DEFAULT_BUDGET),
       maxChunks: Number(process.env.REVIEW_MAX_CHUNKS ?? DEFAULT_MAX_CHUNKS),
     });
@@ -113,5 +113,5 @@ function cli() {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  cli();
+  await cli();
 }

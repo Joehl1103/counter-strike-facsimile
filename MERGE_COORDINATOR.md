@@ -151,63 +151,86 @@ profile and disabled web search remain in force.
 [review-plan.mjs](.github/scripts/review-plan.mjs) reads git objects, starting with
 `git diff --numstat -z --find-renames BASE...HEAD`. It embeds the exact
 `git diff --no-color --find-renames BASE...HEAD` text for each assigned file/part
-in a generated `prompt-file`, inside explicit untrusted-data delimiters. Full
-copies of changed reviewable HEAD text files (up to 2 MiB each) go only under
-`.codex-review-input/head/`. HEAD `AGENTS.md`, `.codex/` and symlink blobs are
-inert data there; symlinks are written as ordinary files. Missing large context
-copies are listed, while their complete diff still gets chunked. Other changed
-files' copies are available for cross-file context, but each reviewer reports
-only on its assigned chunk. Unchanged callers are not copied; insufficient
-context must be reported as a limitation or an incomplete review.
+in a generated `prompt-file`, inside explicit untrusted-data delimiters. Context
+comes from the **entire HEAD tree**, including unchanged callers and dependencies,
+using git objects only. Regular UTF-8 text blobs without NUL bytes, with modes
+`100644` or `100755`, are copied under `.codex-review-input/head/` as read-only,
+non-executable plain files. Each copy is capped at **2 MiB**; the total text-copy
+budget is **100 MiB**, selected deterministically in Git tree order. Files over
+either limit remain listed with their reason; changed-file diffs still get
+chunked in full. Recognized assets and other binary context are not copied.
+
+`context-index.json` inventories the whole HEAD tree and copy availability.
+Symlinks are **never created or copied at their original paths**: `links.txt`
+records `path -> target` as escaped text. Submodules are listed by path and commit
+ID. Every omitted context file, link and submodule is also listed in the prompt.
+The reviewer must inspect relevant HEAD callers/dependencies, and return
+`complete=false` if context needed to judge a change is unavailable. Findings
+remain scoped to the assigned chunk.
+
+HEAD `AGENTS.md` and `.codex/` are nested data, never active configuration.
+Path validation rejects absolute paths, `..`, `.git` components, controls,
+backslashes, drive syntax and ambiguous names. The accepted component alphabet
+is ASCII letters/digits, space, `_-.@()+,[]`, without leading/trailing whitespace
+or trailing periods; unsupported names fail planning instead of being normalized
+or omitted. Symlink targets are listing data only (bounded at 4 KiB), never used
+as destinations or followed.
 
 Planning orders workflow/CI changes, source, tests, scripts/config, docs/data,
-then full-text lockfiles without structured summarizers.
+then all lockfiles as full text.
 Chunks default to **100,000 diff characters**, with a **60-chunk cap** and up to
 **four concurrent reviewers**. Large file diffs split at hunk boundaries, then
 line ranges for oversized hunks (character fragments for an oversized single
 line); labels identify file, part and HEAD lines. Split parts concatenate to the
 original diff. `REVIEW_CHUNK_BUDGET` and `REVIEW_MAX_CHUNKS` can tune these limits;
 set them identically in all jobs if configuring the workflow. A digest mismatch
-fails closed. The manifest records base/head, files/parts, skipped files, lock
-summaries, context availability, uncovered parts and a SHA-256 digest. Every
-matrix leg and the gate regenerate that same manifest from git objects. Overflow
+fails closed. The manifest records base/head, files/parts, skipped files with
+HEAD mode/header evidence, context availability, uncovered parts and a SHA-256
+digest. Every matrix leg and the gate regenerate that same manifest from git objects. Overflow
 skips model calls and produces `complete:false`, listing uncovered parts; it never
 silently drops code or publishes a passing status.
 
-For `package-lock.json` and `npm-shrinkwrap.json`, the trusted planner compares
-base and HEAD `packages` maps and reviews structured summaries instead of raw
-lockfiles. Added/removed/changed entries include package paths, versions, resolved
-hosts, before/after integrity values, an `integrityChanged` flag and changed field
-names. Any resolved URL whose host is not exactly `registry.npmjs.org` is included
-in full and explicitly flagged `NON_REGISTRY_RESOLVED`, even when that package's
-entry is otherwise unchanged. Invalid JSON or a missing supported `packages` map
-fails planning. These summaries do not substitute for a dependency audit.
-`yarn.lock`, `pnpm-lock.yaml` and other unsummarized lockfiles receive full-diff
-review at lowest priority and size-capped HEAD copies, just like other text.
-There are no line-count-only lock summaries.
+All lockfiles, including `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock`
+and `pnpm-lock.yaml`, receive ordinary full-diff review at lowest priority.
+Their HEAD text is available subject to the same context limits. There are no
+structured or line-count lock summaries, and no lock-specific manifest/prompt
+fields. Malformed or legacy lock text is still reviewed in full, not parsed away.
 
-Only files reported as binary by Git's numstat can be skipped, and only when
-their extension appears in this explicit asset allowlist:
+Only a Git-numstat binary file can qualify for an asset skip, and all of these
+conditions are required: allowlisted extension, outside `.github/`, HEAD tree
+mode exactly `100644`, and leading bytes matching the expected format signature.
+The trusted reader retains at most **32 bytes** from `git cat-file`, stopping the
+child process as soon as the prefix arrives; it does not load a whole asset to
+classify its header. The gate rechecks the manifest's mode/header evidence.
+Supported extensions with signature checks are:
 
 - Images: `png`, `jpg`, `jpeg`, `gif`, `webp`, `ico`, `bmp`, `avif`.
 - Audio: `mp3`, `wav`, `ogg`, `flac`, `m4a`; video: `mp4`, `webm`, `mov`.
-- Fonts: `woff`, `woff2`, `ttf`, `otf`, `eot`.
-- Models/textures: `glb`, `gltf-bin`, `fbx`, `obj`, `blend`, `dae`, `ktx2`, `hdr`, `exr`.
+- Fonts: `woff`, `woff2`, `ttf`, `otf`.
+- Models/textures: `glb`, `fbx`, `blend`, `ktx2`, `hdr`, `exr`.
 
-Files under `.github/` are never eligible for this skip. Both old and new paths
-must qualify for a binary rename. `.bin` is not allowed, even under `assets/`;
-neither archives nor SVG qualify. An allowlisted filename that Git reports as
-text is reviewed normally. Every other binary-detected file is listed in
-`uncovered` with reason `unreviewable_binary`, sets `overflow: true`, skips the
-model matrix and fails the gate/status. This also prevents a NUL byte in code
-from turning a source-only PR into a passing zero-chunk review.
+The checks cover PNG/JPEG/GIF headers, RIFF plus WEBP/WAVE tags, `ftyp` at offset
+4 for ISO media, supported MP3 ID3/frame headers, and the format-specific font,
+model and texture magic in `matchesAssetSignature`. Both old and new paths must
+qualify for a rename. Executable-mode assets (`100755`), symlinks (`120000`),
+submodules (`160000`), missing HEAD entries, and bad/truncated signatures cannot
+qualify. Deleted binary assets have no HEAD evidence and therefore fail closed.
+Unchecked extensions such as `eot`, `gltf-bin`, `obj`, `dae`, `.bin`, archives
+and SVG are not binary skip candidates. Plain text with an asset extension still
+receives diff review; asset paths with a non-`100644` HEAD mode fail closed.
+
+Every unreviewable binary is listed in `uncovered` with reason
+`unreviewable_binary`, sets `overflow: true`, skips the model matrix and fails
+the gate/status. A shell script with a NUL byte and a `.png` suffix cannot use
+the asset exception. Header matching is not full media decoding or provenance
+verification; those remain separate acceptance concerns.
 
 All text changes count toward the chunk budget/cap, including `dist/`, `build/`,
 `coverage/`, `*.min.js`, `*.map`, and deletion diffs of any size. Large deletions
 split normally; nothing is omitted because it exceeds 200 lines. There is no
 generated-file exclusion. A zero-chunk PR may pass only when **every changed file
-is an allowlisted binary asset**, with an explicit summary naming those skipped
-files. Empty PRs cannot pass. This status is not asset/provenance or game
+is an asset binary with the required HEAD mode and signature**, with an explicit
+summary naming those skipped files. Empty PRs cannot pass. This status is not asset/provenance or game
 acceptance.
 
 Cloud does not support structured-output requests. Each reviewer returns JSON
@@ -232,7 +255,8 @@ commit status: context `Independent Codex review`, success description exactly
 Sizing supplied for PR #9: 302 files and 3.6 MB of non-lock diff exceeded the old
 60,000-character/40-chunk limits, leaving 117 files uncovered. The revised limits
 previously estimated about 37 chunks. Recalculate with the stricter coverage
-policy: build outputs, large deletions and full unsummarized locks now count.
+policy: build outputs, large deletions and every full lock diff now count.
+Whole-tree context inspection can also increase reviewer time.
 A 100,000-character diff is roughly 25,000 tokens,
 leaving room for instructions and context within the supplied 128k-token
 `gpt-oss:120b` context capacity; actual token use varies with content.

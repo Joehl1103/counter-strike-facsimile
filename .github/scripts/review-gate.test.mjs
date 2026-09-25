@@ -7,7 +7,7 @@ import { aggregateReviews, readReports, renderSummary } from './review-gate.mjs'
 
 const head = 'a'.repeat(40);
 const base = 'b'.repeat(40);
-const plan = { files: [], head, base, overflow: false, chunks: [{ id: 'chunk-001' }, { id: 'chunk-002' }], skipped: [], lockSummaries: [], uncovered: [] };
+const plan = { files: [], head, base, overflow: false, chunks: [{ id: 'chunk-001' }, { id: 'chunk-002' }], skipped: [], uncovered: [] };
 const report = (chunkId, changes = {}) => JSON.stringify({
   reviewed_head: head, reviewed_base: base, chunk_id: chunkId, complete: true,
   verdict: 'pass', summary: 'Inspected assigned changes.', findings: [], limitations: [], ...changes,
@@ -62,8 +62,8 @@ describe('aggregate independent review gate', () => {
 
   test('zero chunks pass only when every changed file is a confirmed allowlisted asset binary', () => {
     const skipped = [
-      { path: 'photo.png', oldPath: 'photo.png', reason: 'asset_binary', size: 20, added: null, removed: null },
-      { path: 'sound.m4a', oldPath: 'sound.m4a', reason: 'asset_binary', size: 30, added: null, removed: null },
+      { path: 'photo.png', oldPath: 'photo.png', reason: 'asset_binary', size: 20, added: null, removed: null, headMode: '100644', headPrefixHex: '89504e470d0a1a0a' },
+      { path: 'sound.m4a', oldPath: 'sound.m4a', reason: 'asset_binary', size: 30, added: null, removed: null, headMode: '100644', headPrefixHex: '0000000066747970' },
     ];
     const emptyPlan = { ...plan, chunks: [], skipped, files: skipped };
     const result = aggregate({ plan: emptyPlan, reports: [], reviewerResult: 'skipped' });
@@ -74,6 +74,8 @@ describe('aggregate independent review gate', () => {
       { path: 'code.js', oldPath: 'code.js' }, { path: 'assets/model.bin', oldPath: 'assets/model.bin' },
       { path: '.github/photo.png', oldPath: '.github/photo.png' },
       { oldPath: 'code.js' }, { added: 1, removed: 0 }, { reason: 'binary' },
+      { headMode: '100755' }, { headMode: '120000' }, { headMode: '160000' },
+      { headMode: null }, { headPrefixHex: '' }, { headPrefixHex: '23212f62696e2f736800' },
     ]) {
       const forgedSkip = { ...skipped[0], ...changes };
       const invalidPlan = { ...emptyPlan, skipped: [forgedSkip], files: [forgedSkip] };
@@ -82,7 +84,6 @@ describe('aggregate independent review gate', () => {
     for (const invalidPlan of [
       { ...emptyPlan, files: [...skipped, { path: 'unaccounted.js' }] },
       { ...emptyPlan, files: [{ ...skipped[0], path: 'other.png' }, skipped[1]] },
-      { ...emptyPlan, lockSummaries: [{ path: 'package-lock.json' }] },
       { ...emptyPlan, uncovered: [{ path: 'bad.js', reason: 'unreviewable_binary' }] },
       { ...emptyPlan, skipped: [], files: [] },
     ]) {
