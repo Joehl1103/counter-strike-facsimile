@@ -2,13 +2,19 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, lstatSync, mkdirSync, writeFileSync } from 'node:fs';
-import { basename, dirname, relative, resolve, sep } from 'node:path';
+import { basename, dirname, extname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const DEFAULT_BUDGET = 100_000;
 export const DEFAULT_MAX_CHUNKS = 60;
 export const DEFAULT_MAX_COPY_BYTES = 2 * 1024 * 1024;
-const LOCK_NAMES = new Set(['package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml']);
+const STRUCTURED_LOCK_NAMES = new Set(['package-lock.json', 'npm-shrinkwrap.json']);
+const BINARY_ASSET_EXTENSIONS = new Set([
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'bmp', 'avif',
+  'mp3', 'wav', 'ogg', 'flac', 'm4a', 'mp4', 'webm', 'mov',
+  'woff', 'woff2', 'ttf', 'otf', 'eot',
+  'glb', 'gltf-bin', 'fbx', 'obj', 'blend', 'dae', 'ktx2', 'hdr', 'exr',
+]);
 
 // Never invoke a shell, diff driver or textconv program on candidate content.
 function git(repoDir, arguments_, encoding = 'utf8') {
@@ -28,18 +34,34 @@ function validatePath(path) {
   assert.ok(path.split('/').every((part) => part && part !== '.' && part !== '..'), 'Unsafe packet path.');
 }
 
+function isAllowedBinaryAssetPath(path) {
+  if (typeof path !== 'string' || path.toLowerCase().startsWith('.github/')) {
+    return false;
+  }
+  const extension = extname(path).slice(1).toLowerCase();
+  return BINARY_ASSET_EXTENSIONS.has(extension);
+}
+
+// A rename must be safe on both sides: moving binary code into an asset path
+// cannot make the source deletion disappear from review.
+export function isSkippableAssetBinary(file) {
+  return file.added === null && file.removed === null &&
+    isAllowedBinaryAssetPath(file.path) && isAllowedBinaryAssetPath(file.oldPath);
+}
+
 export function classifyFile(path, binary = false) {
-  if (LOCK_NAMES.has(basename(path))) {
-    return { category: 'lock', priority: 3 };
-  }
   if (binary) {
-    return { category: 'binary', reason: 'binary' };
+    if (isAllowedBinaryAssetPath(path)) {
+      return { category: 'asset', reason: 'asset_binary' };
+    }
+    return { category: 'binary', reason: 'unreviewable_binary' };
   }
-  if (/(^|\/)(dist|build|coverage)\//i.test(path) || /(?:\.min\.js|\.map)$/i.test(path)) {
-    return { category: 'generated', reason: 'generated' };
+  if (STRUCTURED_LOCK_NAMES.has(basename(path))) {
+    return { category: 'lock-summary', priority: 3 };
   }
-  if (/\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|mp3|wav|ogg|flac|aac|mp4|webm|mov|glb|gltf|fbx|obj|blend|woff2?|ttf|otf|zip)$/i.test(path)) {
-    return { category: 'asset', reason: 'asset' };
+  // Unsupported lock formats receive ordinary full-diff review, after docs/data.
+  if (/(?:^|[.-])lock(?:file)?(?:b|\.(?:json|ya?ml|toml))?$/i.test(basename(path))) {
+    return { category: 'lock-text', priority: 5 };
   }
   if (path.startsWith('.github/')) {
     return { category: 'workflow/CI', priority: 0 };
@@ -111,14 +133,19 @@ export function manifestDigest(manifest) {
 
 function packageIdentity(entry) {
   let resolvedHost = null;
+  let nonRegistryResolvedUrl = null;
   if (typeof entry.resolved === 'string') {
     try {
       resolvedHost = new URL(entry.resolved).host || '(local/non-network)';
     } catch {
       resolvedHost = '(local/non-URL)';
     }
+    if (resolvedHost !== 'registry.npmjs.org') {
+      nonRegistryResolvedUrl = entry.resolved;
+    }
   }
-  return { version: entry.version ?? null, resolvedHost };
+  return { version: entry.version ?? null, resolvedHost,
+    integrity: entry.integrity ?? null, nonRegistryResolvedUrl };
 }
 
 function readPackages(repoDir, entry) {
@@ -136,17 +163,21 @@ function readPackages(repoDir, entry) {
 
 // The formatter is trusted; package names and values remain explicitly untrusted data.
 function summarizeLock(repoDir, file, baseTree, headTree) {
-  const summary = { path: file.path, summarized: true, addedLines: file.added, removedLines: file.removed, entries: [] };
-  if (!['package-lock.json', 'npm-shrinkwrap.json'].includes(basename(file.path))) {
-    summary.limitation = 'Non-JSON lock format: changed-line counts only; dependency entries were not parsed.';
-    return summary;
-  }
+  const summary = { path: file.path, summarized: true, addedLines: file.added,
+    removedLines: file.removed, entries: [], nonRegistryResolutions: [] };
   const before = readPackages(repoDir, baseTree.get(file.oldPath));
   const after = readPackages(repoDir, headTree.get(file.path));
   const names = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
   for (const name of names) {
     const oldEntry = Object.hasOwn(before, name) ? before[name] : undefined;
     const newEntry = Object.hasOwn(after, name) ? after[name] : undefined;
+    const beforeIdentity = oldEntry ? packageIdentity(oldEntry) : null;
+    const afterIdentity = newEntry ? packageIdentity(newEntry) : null;
+    const oldNonRegistryUrl = beforeIdentity?.nonRegistryResolvedUrl ?? null;
+    const newNonRegistryUrl = afterIdentity?.nonRegistryResolvedUrl ?? null;
+    if (oldNonRegistryUrl !== null || newNonRegistryUrl !== null) {
+      summary.nonRegistryResolutions.push({ name, before: oldNonRegistryUrl, after: newNonRegistryUrl });
+    }
     if (JSON.stringify(canonical(oldEntry)) === JSON.stringify(canonical(newEntry))) {
       continue;
     }
@@ -158,8 +189,9 @@ function summarizeLock(repoDir, file, baseTree, headTree) {
     }
     const fields = [...new Set([...Object.keys(oldEntry ?? {}), ...Object.keys(newEntry ?? {})])].sort();
     summary.entries.push({ name, change,
-      before: oldEntry ? packageIdentity(oldEntry) : null,
-      after: newEntry ? packageIdentity(newEntry) : null,
+      before: beforeIdentity,
+      after: afterIdentity,
+      integrityChanged: JSON.stringify(oldEntry?.integrity) !== JSON.stringify(newEntry?.integrity),
       changedFields: fields.filter((field) => JSON.stringify(canonical(oldEntry?.[field])) !== JSON.stringify(canonical(newEntry?.[field]))),
     });
   }
@@ -275,29 +307,34 @@ export function buildPlan({ repoDir, base, head, budget = DEFAULT_BUDGET,
     const headEntry = headTree.get(file.path);
     const previousEntry = previousTree.get(file.oldPath);
     const deleted = !headEntry;
-    const classification = classifyFile(file.path, file.added === null);
+    const binary = file.added === null || file.removed === null;
+    let classification = classifyFile(file.path, binary);
+    if (binary && !isSkippableAssetBinary(file)) {
+      classification = { category: 'binary', reason: 'unreviewable_binary' };
+    }
     const size = headEntry?.size ?? previousEntry?.size ?? 0;
     const record = { ...file, ...classification, size, deleted };
     manifest.files.push(record);
-    let reason = classification.reason;
-    if (!reason && deleted && file.removed >= 200 && classification.category !== 'lock') {
-      reason = 'deleted-large';
+    if (classification.reason === 'unreviewable_binary') {
+      manifest.uncovered.push(record);
+      continue;
     }
-    if (reason) {
-      manifest.skipped.push({ ...record, reason });
+    if (classification.reason === 'asset_binary') {
+      manifest.skipped.push(record);
       continue;
     }
 
     let diff = diffs[index];
     let kind = deleted ? 'deletion' : 'diff';
-    if (classification.category === 'lock') {
+    if (classification.category === 'lock-summary') {
       kind = 'lock-summary';
       const summary = summarizeLock(repoDir, file, baseTree, headTree);
       manifest.lockSummaries.push(summary);
       // One dependency per line keeps large summaries splittable and readable.
-      const { entries, ...metadata } = summary;
+      const { entries, nonRegistryResolutions, ...metadata } = summary;
       diff = `TRUSTED LOCK SUMMARY (values are untrusted data)\n${JSON.stringify(metadata)}\n`;
       diff += entries.map((entry) => JSON.stringify(entry) + '\n').join('');
+      diff += nonRegistryResolutions.map((entry) => `NON_REGISTRY_RESOLVED ${JSON.stringify(entry)}\n`).join('');
     } else if (headEntry) {
       let contextReason = null;
       if (headEntry.type !== 'blob') {
@@ -332,7 +369,8 @@ export function buildPlan({ repoDir, base, head, budget = DEFAULT_BUDGET,
   });
   const chunks = packItems(reviewItems, budget);
   manifest.chunks = chunks.slice(0, maxChunks);
-  manifest.uncovered = chunks.slice(maxChunks).flatMap((chunk) => chunk.items);
+  const cappedItems = chunks.slice(maxChunks).flatMap((chunk) => chunk.items);
+  manifest.uncovered.push(...cappedItems);
   manifest.overflow = manifest.uncovered.length > 0;
   manifest.digest = manifestDigest(manifest);
   return manifest;

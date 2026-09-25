@@ -160,7 +160,8 @@ files' copies are available for cross-file context, but each reviewer reports
 only on its assigned chunk. Unchanged callers are not copied; insufficient
 context must be reported as a limitation or an incomplete review.
 
-Planning orders workflow/CI changes, source, tests, scripts/config, then docs/data.
+Planning orders workflow/CI changes, source, tests, scripts/config, docs/data,
+then full-text lockfiles without structured summarizers.
 Chunks default to **100,000 diff characters**, with a **60-chunk cap** and up to
 **four concurrent reviewers**. Large file diffs split at hunk boundaries, then
 line ranges for oversized hunks (character fragments for an oversized single
@@ -173,29 +174,50 @@ matrix leg and the gate regenerate that same manifest from git objects. Overflow
 skips model calls and produces `complete:false`, listing uncovered parts; it never
 silently drops code or publishes a passing status.
 
-Lockfiles are reviewed as summary items, never embedded or copied raw. For
-`package-lock.json` and `npm-shrinkwrap.json`, the trusted planner compares base
-and HEAD `packages` maps and lists added/removed/changed entries, versions,
-resolved hosts and changed field names. Invalid JSON or an unsupported missing
-`packages` map fails planning. `yarn.lock` and `pnpm-lock.yaml` receive changed-line
-counts and an explicit summarized-format limitation. These summaries do not
-substitute for a dependency audit or reproduce integrity values/full URLs.
+For `package-lock.json` and `npm-shrinkwrap.json`, the trusted planner compares
+base and HEAD `packages` maps and reviews structured summaries instead of raw
+lockfiles. Added/removed/changed entries include package paths, versions, resolved
+hosts, before/after integrity values, an `integrityChanged` flag and changed field
+names. Any resolved URL whose host is not exactly `registry.npmjs.org` is included
+in full and explicitly flagged `NON_REGISTRY_RESOLVED`, even when that package's
+entry is otherwise unchanged. Invalid JSON or a missing supported `packages` map
+fails planning. These summaries do not substitute for a dependency audit.
+`yarn.lock`, `pnpm-lock.yaml` and other unsummarized lockfiles receive full-diff
+review at lowest priority and size-capped HEAD copies, just like other text.
+There are no line-count-only lock summaries.
 
-Binary files, assets (including models and fonts; SVG remains reviewable text)
-and generated files (`dist/`, `build/`, `coverage/`, `*.min.js`, `*.map`) are listed
-with reasons, byte sizes and line counts, not reviewed. Deleted text files include
-their deletion diff when fewer than 200 lines; larger deletions are listed as
-`deleted-large`. A zero-chunk PR may pass **only** when every changed file is a
-binary/asset exclusion, with an explicit summary naming those files. Locks must
-always produce review items; large-deletion-only, generated-only and empty PRs
-do not auto-pass. A passing mixed PR still excludes its listed skipped files;
-this status is not asset/provenance or game acceptance.
+Only files reported as binary by Git's numstat can be skipped, and only when
+their extension appears in this explicit asset allowlist:
+
+- Images: `png`, `jpg`, `jpeg`, `gif`, `webp`, `ico`, `bmp`, `avif`.
+- Audio: `mp3`, `wav`, `ogg`, `flac`, `m4a`; video: `mp4`, `webm`, `mov`.
+- Fonts: `woff`, `woff2`, `ttf`, `otf`, `eot`.
+- Models/textures: `glb`, `gltf-bin`, `fbx`, `obj`, `blend`, `dae`, `ktx2`, `hdr`, `exr`.
+
+Files under `.github/` are never eligible for this skip. Both old and new paths
+must qualify for a binary rename. `.bin` is not allowed, even under `assets/`;
+neither archives nor SVG qualify. An allowlisted filename that Git reports as
+text is reviewed normally. Every other binary-detected file is listed in
+`uncovered` with reason `unreviewable_binary`, sets `overflow: true`, skips the
+model matrix and fails the gate/status. This also prevents a NUL byte in code
+from turning a source-only PR into a passing zero-chunk review.
+
+All text changes count toward the chunk budget/cap, including `dist/`, `build/`,
+`coverage/`, `*.min.js`, `*.map`, and deletion diffs of any size. Large deletions
+split normally; nothing is omitted because it exceeds 200 lines. There is no
+generated-file exclusion. A zero-chunk PR may pass only when **every changed file
+is an allowlisted binary asset**, with an explicit summary naming those skipped
+files. Empty PRs cannot pass. This status is not asset/provenance or game
+acceptance.
 
 Cloud does not support structured-output requests. Each reviewer returns JSON
 with exact head, base and chunk ID, completeness, verdict, summary, findings and
 limitations. Reports use seven-day `codex-review-<chunk id>` artifacts. Rerunning
 a reviewer leg overwrites its previous artifact; the gate still rejects duplicate
-or extra chunk IDs.
+or extra chunk IDs. Downloads use `merge-multiple: true`, so both single-artifact
+and multi-artifact runs produce a flat directory of `chunk-NNN.json` reports.
+The reader rejects directories, symlinks and every other filename; the filename
+ID must equal the report's `chunk_id`, and the set must equal the plan exactly.
 [review-gate.mjs](.github/scripts/review-gate.mjs), on a fresh runner without model
 secrets, requires a successful plan and reviewer matrix, no overflow, exactly one
 report per planned chunk and no extra IDs. Each report must pass the existing
@@ -209,12 +231,15 @@ commit status: context `Independent Codex review`, success description exactly
 
 Sizing supplied for PR #9: 302 files and 3.6 MB of non-lock diff exceeded the old
 60,000-character/40-chunk limits, leaving 117 files uncovered. The revised limits
-estimate about 37 chunks. A 100,000-character diff is roughly 25,000 tokens,
+previously estimated about 37 chunks. Recalculate with the stricter coverage
+policy: build outputs, large deletions and full unsummarized locks now count.
+A 100,000-character diff is roughly 25,000 tokens,
 leaving room for instructions and context within the supplied 128k-token
 `gpt-oss:120b` context capacity; actual token use varies with content.
 
-Runner-minute planning estimate: **chunks × roughly 3 minutes**, so PR #9 would
-use about **110 minutes**, plus planning/gate overhead, against the private Free
+Runner-minute planning estimate: **chunks × roughly 3 minutes**. The earlier
+37-chunk estimate for PR #9 corresponds to about **110 minutes**, plus
+planning/gate overhead, against the private Free
 repository's supplied **2,000-minute monthly quota**. At the 60-chunk cap, estimate
 180 reviewer minutes. Four-way parallelism reduces elapsed time, not total
 minutes. The unchanged 20-minute reviewer timeout permits up to 1,200 reviewer

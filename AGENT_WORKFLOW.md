@@ -23,13 +23,17 @@ reviewer never execute candidate code.
 Review input is a trusted packet generated from exact `BASE...HEAD` git objects,
 with the assigned diff embedded in the prompt and HEAD context nested under
 `.codex-review-input/head/`. Chunk reviewers return separate reports; the base
-aggregate gate requires every planned chunk to pass. Locks use dependency or
-line-count summaries; binary/assets, generated files and large deletions are
-listed exclusions. Only binary/asset-only PRs can pass without a model review.
-Overflow fails closed. The status remains `Independent Codex review` with
+aggregate gate requires every planned chunk to pass, reading flat `chunk-NNN.json`
+reports. Package-lock/npm-shrinkwrap summaries include integrity changes and
+non-registry URLs; other locks receive full-diff review. All text, including build
+outputs and deletions of any size, counts toward the budget/cap. Only explicit
+allowlisted asset binaries outside `.github/` can be skipped; all other binaries
+are uncovered and fail closed. Zero chunks pass only for allowlisted-binary-only
+PRs. Overflow fails closed. The status remains `Independent Codex review` with
 `Reviewed <head> against <base>`. Default 100k-character chunks, cap 60, four in
-parallel: estimate chunks × roughly 3 runner minutes (PR #9: about 37 chunks,
-110 minutes of the 2,000-minute monthly quota), up to 20 per chunk at timeout. See the
+parallel: estimate chunks × roughly 3 runner minutes, up to 20 per chunk at
+timeout, against the 2,000-minute monthly quota. PR #9's earlier estimate of
+37 chunks/110 minutes needs recalculation under the stricter coverage policy. See the
 Review provider section in MERGE_COORDINATOR.md for limits and exclusions.
 Reviewer workflow/script changes activate only after reaching main because
 `pull_request_target` uses the base workflow.

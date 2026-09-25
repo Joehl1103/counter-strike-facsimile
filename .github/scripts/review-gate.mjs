@@ -3,7 +3,7 @@ import { appendFileSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateReview } from './ci-policy.mjs';
-import { buildPlan, DEFAULT_BUDGET, DEFAULT_MAX_CHUNKS } from './review-plan.mjs';
+import { buildPlan, DEFAULT_BUDGET, DEFAULT_MAX_CHUNKS, isSkippableAssetBinary } from './review-plan.mjs';
 
 // Collect every failure so the summary explains all missing or adverse evidence.
 export function aggregateReviews({ plan, reports, head, base, reviewerResult, planResult }) {
@@ -16,7 +16,8 @@ export function aggregateReviews({ plan, reports, head, base, reviewerResult, pl
   }
   requireCondition(planResult === 'success', 'Review planning failed or did not run.');
   requireCondition(plan.head === head && plan.base === base, 'Plan identities do not match the candidate.');
-  requireCondition(plan.overflow === false, 'Plan overflow: not all changed content can be covered.');
+  requireCondition(plan.overflow === false, 'Plan overflow: chunk cap or unreviewable binary content prevents a complete review.');
+  requireCondition(plan.uncovered.length === 0, 'Plan contains uncovered changes.');
   const expectedIds = new Set(plan.chunks.map((chunk) => chunk.id));
   requireCondition(expectedIds.size === plan.chunks.length, 'Plan contains duplicate chunk ids.');
   const observedIds = new Set();
@@ -27,7 +28,7 @@ export function aggregateReviews({ plan, reports, head, base, reviewerResult, pl
     try {
       const parsed = JSON.parse(report.text);
       parsedReports.push({ id: report.id, report: parsed });
-      assert.equal(parsed.chunk_id, report.id, 'Report chunk_id does not match its artifact.');
+      assert.equal(parsed.chunk_id, report.id, 'Report chunk_id does not match its filename.');
       validateReview(parsed, head, base);
     } catch (error) {
       limitations.push(`${report.id}: ${error.message}`);
@@ -41,16 +42,22 @@ export function aggregateReviews({ plan, reports, head, base, reviewerResult, pl
     requireCondition(observedIds.has(id), `Missing chunk report: ${id}`);
   }
 
-  let summary = `Reviewed ${plan.chunks.length} planned chunks; ${plan.skipped.length} files excluded by policy.`;
+  let summary = `Planned ${plan.chunks.length} chunks; ${plan.skipped.length} files excluded by policy.`;
   if (plan.chunks.length > 0) {
     requireCondition(reviewerResult === 'success', 'Independent reviewer job failed or did not run.');
   } else {
     requireCondition(reviewerResult === 'skipped', 'Zero-chunk reviewer must be skipped.');
-    const onlyBinaryOrAssets = plan.skipped.length > 0 &&
-      plan.skipped.every((entry) => ['binary', 'asset'].includes(entry.reason));
-    requireCondition(onlyBinaryOrAssets && plan.lockSummaries.length === 0,
-      'Zero chunks may pass only for binary/asset-only changes, never locks, large deletions or generated-only changes.');
-    summary = `No model review: only binary/assets excluded by policy: ${plan.skipped.map((entry) => entry.path).join(', ')}.`;
+    const changedPaths = new Set(plan.files.map((file) => file.path));
+    const skippedPaths = new Set(plan.skipped.map((file) => file.path));
+    const onlyAssetBinaries = plan.files.length > 0 &&
+      plan.files.every(isSkippableAssetBinary) &&
+      plan.skipped.every((entry) => entry.reason === 'asset_binary' && isSkippableAssetBinary(entry));
+    const allChangedFilesSkipped = plan.files.length === plan.skipped.length &&
+      changedPaths.size === skippedPaths.size &&
+      [...changedPaths].every((path) => skippedPaths.has(path));
+    requireCondition(onlyAssetBinaries && allChangedFilesSkipped && plan.lockSummaries.length === 0,
+      'Zero chunks may pass only when every changed file is an allowlisted binary asset outside .github/.');
+    summary = `No model review; skipped asset binaries: ${plan.skipped.map((entry) => entry.path).join(', ')}.`;
   }
   const complete = limitations.length === 0;
   return { reviewed_head: head, reviewed_base: base, complete,
@@ -64,17 +71,16 @@ export function renderSummary(result) {
   return `<h2>Independent Codex review</h2><pre>${escaped}</pre>\n`;
 }
 
-// Download artifacts into separate directories. Inspect all files, not a glob
-// that could conceal extra reports. Artifact folder AND filename bind the id.
+// merge-multiple downloads one or many artifacts into the same flat directory.
+// Never recurse or follow symlinks. The aggregate validator binds each filename
+// to both the planned id set and the report's own chunk_id.
 export function readReports(directory) {
   const reports = [];
-  for (const artifact of readdirSync(directory, { withFileTypes: true })) {
-    assert.ok(artifact.isDirectory() && /^codex-review-chunk-\d{3,}$/.test(artifact.name), 'Unexpected review artifact.');
-    const id = artifact.name.slice('codex-review-'.length);
-    const files = readdirSync(resolve(directory, artifact.name), { withFileTypes: true });
-    assert.equal(files.length, 1, `Artifact ${id} must contain exactly one report.`);
-    assert.ok(files[0].isFile() && files[0].name === `${id}.json`, `Unexpected report file for ${id}.`);
-    reports.push({ id, text: readFileSync(resolve(directory, artifact.name, files[0].name), 'utf8') });
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const match = entry.name.match(/^(chunk-\d{3,})\.json$/);
+    // The equality also rejects a trailing newline, which JS's $ can otherwise allow.
+    assert.ok(entry.isFile() && match && match[0] === entry.name, 'Unexpected report file; require flat chunk-NNN.json regular files.');
+    reports.push({ id: match[1], text: readFileSync(resolve(directory, entry.name), 'utf8') });
   }
   return reports;
 }

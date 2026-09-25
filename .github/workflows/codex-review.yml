@@ -190,7 +190,7 @@ jobs:
         with:
           pattern: codex-review-*
           path: ${{ runner.temp }}/codex-review-reports
-          merge-multiple: false
+          merge-multiple: true
       - name: Require every planned chunk to pass for this candidate
         id: validate
         if: ${{ always() }}

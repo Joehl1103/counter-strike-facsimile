@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
+import { aggregateReviews } from './review-gate.mjs';
 import { buildPlan, classifyFile, manifestDigest, renderPacket, renderPrompt } from './review-plan.mjs';
 
 // Each fixture uses real objects and leaves the checkout at base during rendering.
@@ -75,14 +76,13 @@ describe('trusted git-object planning', () => {
     assert.equal(classifyFile('icon.svg').category, 'source');
     assert.ok(items(plan).some((item) => item.path === 'small.ts' && item.kind === 'deletion'));
     assert.ok(items(plan).some((item) => item.path === 'package-lock.json' && item.kind === 'lock-summary'));
-    const skipped = Object.fromEntries(plan.skipped.map((file) => [file.path, file]));
-    assert.equal(skipped['binary.bin'].reason, 'binary');
-    assert.equal(skipped['photo.png'].reason, 'asset');
-    assert.equal(skipped['large.ts'].reason, 'deleted-large');
-    assert.equal(skipped['large.ts'].size, 1400);
-    for (const path of ['dist/app.js', 'build/app.js', 'coverage/report.txt', 'app.min.js', 'app.js.map']) {
-      assert.equal(skipped[path].reason, 'generated');
+    assert.deepEqual(plan.skipped, []);
+    assert.equal(plan.overflow, true);
+    assert.equal(plan.uncovered.find((file) => file.path === 'binary.bin').reason, 'unreviewable_binary');
+    for (const path of ['photo.png', 'large.ts', 'dist/app.js', 'build/app.js', 'coverage/report.txt', 'app.min.js', 'app.js.map']) {
+      assert.ok(items(plan).some((item) => item.path === path), `Missing review for ${path}`);
     }
+    assert.equal(plan.files.find((file) => file.path === 'large.ts').size, 1400);
   });
 
   test('packs small diffs and splits huge hunks without dropping bytes, within budget', (context) => {
@@ -164,9 +164,10 @@ describe('trusted git-object planning', () => {
     assert.equal(summary.entries[1].before.resolvedHost, 'old.example');
     assert.equal(summary.entries[1].after.resolvedHost, 'new.example');
     assert.ok(summary.entries[1].changedFields.includes('hasInstallScript'));
-    assert.ok(items(plan).every((item) => item.kind === 'lock-summary'));
-    assert.ok(!items(plan).map((item) => item.diff).join('').includes('https://new.example/pkg.tgz'));
-    assert.equal(plan.lockSummaries.find((entry) => entry.path === 'yarn.lock').summarized, true);
+    assert.equal(items(plan).find((item) => item.path === 'package-lock.json').kind, 'lock-summary');
+    assert.ok(items(plan).map((item) => item.diff).join('').includes('https://new.example/pkg.tgz'));
+    assert.equal(items(plan).find((item) => item.path === 'yarn.lock').kind, 'diff');
+    assert.equal(plan.lockSummaries.find((entry) => entry.path === 'yarn.lock'), undefined);
   });
 
   test('handles renames and literal unusual filenames from NUL-delimited numstat', (context) => {
@@ -302,8 +303,8 @@ describe('planner and gate CLI integration', () => {
     assert.ok(existsSync(join(input.repoDir, '.codex-review-input/prompt.txt')));
 
     const reportsDir = join(input.repoDir, 'reports');
-    mkdirSync(join(reportsDir, 'codex-review-chunk-001'), { recursive: true });
-    writeFileSync(join(reportsDir, 'codex-review-chunk-001/chunk-001.json'), JSON.stringify({
+    mkdirSync(reportsDir);
+    writeFileSync(join(reportsDir, 'chunk-001.json'), JSON.stringify({
       reviewed_head: input.head, reviewed_base: input.base, chunk_id: 'chunk-001',
       complete: true, verdict: 'pass', summary: 'Checked.', findings: [], limitations: [],
     }));
@@ -339,4 +340,157 @@ describe('planner and gate CLI integration', () => {
     const input = fixture(context, {}, { 'npm-shrinkwrap.json': '{"lockfileVersion":1}' });
     assert.throws(() => buildPlan(input), /packages map/);
   });
+});
+
+
+describe('adversarial review coverage', () => {
+  function skipMatrix(plan) {
+    return aggregateReviews({ plan, head: plan.head, base: plan.base,
+      reports: [], planResult: 'success', reviewerResult: 'skipped' });
+  }
+
+  test('a NUL byte in JavaScript cannot turn a code-only PR into a passing binary-only PR', (context) => {
+    const input = fixture(context, {}, { 'authorize.js': 'grantAdmin();\0\n' });
+    const plan = buildPlan(input);
+    assert.equal(plan.chunks.length, 0);
+    assert.equal(plan.overflow, true);
+    assert.deepEqual(plan.skipped, []);
+    assert.equal(plan.uncovered[0].path, 'authorize.js');
+    assert.equal(plan.uncovered[0].reason, 'unreviewable_binary');
+    assert.equal(skipMatrix(plan).complete, false);
+  });
+
+  test('all non-allowlisted binaries and all .github binaries remain explicitly uncovered', (context) => {
+    const paths = ['app.js', 'app.ts', 'tool.py', 'tool.sh', 'data.json', 'ci.yml', 'icon.svg',
+      'unknown', 'unknown.xyz', '.png', 'archive.zip', 'archive.tar', 'assets/model.bin', 'model.gltf',
+      '.github/actions/image.png', '.github/asset.glb', '.github/workflows/ci.yml',
+      'package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml'];
+    const files = Object.fromEntries(paths.map((path) => [path, 'binary\0data\n']));
+    const input = fixture(context, {}, files);
+    const plan = buildPlan(input);
+    assert.equal(plan.overflow, true);
+    assert.equal(plan.skipped.length, 0);
+    assert.deepEqual(plan.uncovered.map((file) => file.path).sort(), [...paths].sort());
+    assert.ok(plan.uncovered.every((file) => file.reason === 'unreviewable_binary'));
+    assert.equal(skipMatrix(plan).complete, false);
+  });
+
+  test('only explicit binary asset extensions outside .github can pass without model chunks', (context) => {
+    const extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'bmp', 'avif',
+      'mp3', 'wav', 'ogg', 'flac', 'm4a', 'mp4', 'webm', 'mov',
+      'woff', 'woff2', 'ttf', 'otf', 'eot', 'glb', 'gltf-bin', 'fbx', 'obj', 'blend', 'dae', 'ktx2', 'hdr', 'exr'];
+    const files = Object.fromEntries(extensions.map((extension) => [`assets/item.${extension}`, 'binary\0data']));
+    const input = fixture(context, {}, files);
+    const plan = buildPlan(input);
+    assert.equal(plan.overflow, false);
+    assert.equal(plan.chunks.length, 0);
+    assert.equal(plan.skipped.length, extensions.length);
+    assert.ok(plan.skipped.every((file) => file.reason === 'asset_binary'));
+    assert.equal(skipMatrix(plan).complete, true);
+  });
+
+  test('allowlisted filenames containing text are reviewed with full HEAD context', (context) => {
+    const files = { 'script.png': 'grantAdmin();\n', 'model.obj': 'execDangerousCommand();\n' };
+    const input = fixture(context, {}, files);
+    const plan = buildPlan(input);
+    assert.deepEqual(plan.skipped, []);
+    assert.deepEqual(plan.uncovered, []);
+    for (const [path, content] of Object.entries(files)) {
+      assert.ok(items(plan).some((item) => item.path === path && item.diff.includes(content)));
+    }
+    const packetDir = join(input.repoDir, '.codex-review-input');
+    renderPacket({ ...input, plan, chunkId: plan.chunks[0].id, expectedDigest: plan.digest, packetDir });
+    assert.equal(readFileSync(join(packetDir, 'head/script.png'), 'utf8'), files['script.png']);
+    assert.equal(skipMatrix(plan).complete, false);
+  });
+
+  test('renaming a binary source file to an asset extension cannot hide its deletion', (context) => {
+    const payload = 'grantAdmin();\0\n'.repeat(30);
+    const input = fixture(context, { '.github/actions/check.js': payload }, {
+      '.github/actions/check.js': null, 'asset.png': payload,
+    });
+    const plan = buildPlan(input);
+    assert.equal(plan.files[0].oldPath, '.github/actions/check.js');
+    assert.equal(plan.overflow, true);
+    assert.equal(plan.skipped.length, 0);
+    assert.equal(plan.uncovered[0].reason, 'unreviewable_binary');
+  });
+
+  test('build directories, bundled scripts and map/coverage text all consume review budget', (context) => {
+    const paths = ['.github/actions/build/index.js', 'src/build/authorize.ts', 'runtime.min.js',
+      'dist/authorize.js', 'coverage/check.js', 'runtime.js.map'];
+    const content = 'grantAdmin();\n'.repeat(50);
+    const input = fixture(context, {}, Object.fromEntries(paths.map((path) => [path, content])));
+    const plan = buildPlan({ ...input, budget: 400 });
+    assert.equal(plan.overflow, false);
+    assert.equal(plan.skipped.length, 0);
+    assert.ok(plan.chunks.length > paths.length);
+    for (const path of paths) {
+      const reviewed = items(plan).filter((item) => item.path === path).map((item) => item.diff).join('');
+      assert.equal(reviewed, input.git('diff', '--no-color', '--find-renames', `${input.base}...${input.head}`, '--', path));
+    }
+    assert.equal(items(plan)[0].path, '.github/actions/build/index.js');
+    assert.equal(buildPlan({ ...input, budget: 400, maxChunks: 1 }).overflow, true);
+  });
+
+  test('large deletions are split and fully reviewed, or fail closed at the chunk cap', (context) => {
+    const input = fixture(context, { 'authorize.ts': 'enforcePermissions();\n'.repeat(300) }, { 'authorize.ts': null });
+    const plan = buildPlan({ ...input, budget: 400 });
+    assert.equal(plan.skipped.length, 0);
+    assert.equal(plan.overflow, false);
+    assert.ok(plan.chunks.length > 1);
+    assert.ok(items(plan).every((item) => item.kind === 'deletion'));
+    assert.equal(items(plan).map((item) => item.diff).join(''), input.git('diff', '--no-color', '--find-renames', `${input.base}...${input.head}`));
+    const capped = buildPlan({ ...input, budget: 400, maxChunks: 1 });
+    assert.equal(capped.overflow, true);
+    assert.ok(capped.uncovered.every((item) => item.path === 'authorize.ts'));
+    assert.equal(skipMatrix(capped).complete, false);
+  });
+
+  test('unsummarized locks retain their full malicious diff at lowest priority and in HEAD copies', (context) => {
+    const paths = ['yarn.lock', 'pnpm-lock.yaml', 'Cargo.lock', 'composer.lock', 'custom.lock.json'];
+    const content = 'resolved: https://attacker.example/install.tgz\nintegrity: changed\n'.repeat(5);
+    const files = Object.fromEntries(paths.map((path) => [path, content]));
+    const input = fixture(context, {}, { ...files, 'README.md': 'context\n' });
+    const plan = buildPlan({ ...input, budget: 400 });
+    assert.equal(plan.lockSummaries.length, 0);
+    assert.equal(items(plan)[0].path, 'README.md');
+    for (const path of paths) {
+      const parts = items(plan).filter((item) => item.path === path);
+      assert.ok(parts.length > 1);
+      assert.ok(parts.every((item) => item.kind === 'diff' && item.priority === 5));
+      assert.equal(parts.map((item) => item.diff).join(''), input.git('diff', '--no-color', '--find-renames', `${input.base}...${input.head}`, '--', path));
+    }
+    const packetDir = join(input.repoDir, '.codex-review-input');
+    renderPacket({ ...input, plan, chunkId: plan.chunks[0].id, expectedDigest: plan.digest, packetDir });
+    assert.equal(readFileSync(join(packetDir, 'head/yarn.lock'), 'utf8'), content);
+  });
+
+  for (const path of ['package-lock.json', 'npm-shrinkwrap.json']) {
+    test(`${path} exposes integrity changes and flags non-registry URLs, even in unchanged packages`, (context) => {
+      const lock = (packages) => JSON.stringify({ lockfileVersion: 3, packages });
+      const unchanged = { version: '1', resolved: 'https://mirror.example/unchanged.tgz', integrity: 'sha512-same' };
+      const input = fixture(context, { [path]: lock({
+        'node_modules/changed': { version: '1', resolved: 'https://registry.npmjs.org/pkg.tgz', integrity: 'sha512-before' },
+        'node_modules/unchanged': unchanged,
+      }) }, { [path]: lock({
+        'node_modules/changed': { version: '1', resolved: 'https://registry.npmjs.org.evil.example/pkg.tgz', integrity: 'sha512-after' },
+        'node_modules/unchanged': unchanged,
+      }) });
+      const plan = buildPlan(input);
+      const summary = plan.lockSummaries[0];
+      const changed = summary.entries[0];
+      assert.equal(changed.integrityChanged, true);
+      assert.equal(changed.before.integrity, 'sha512-before');
+      assert.equal(changed.after.integrity, 'sha512-after');
+      assert.equal(changed.before.nonRegistryResolvedUrl, null);
+      assert.equal(changed.after.nonRegistryResolvedUrl, 'https://registry.npmjs.org.evil.example/pkg.tgz');
+      assert.deepEqual(summary.nonRegistryResolutions.map((entry) => entry.name), ['node_modules/changed', 'node_modules/unchanged']);
+      const diff = items(plan).map((item) => item.diff).join('');
+      assert.match(diff, /sha512-before/);
+      assert.match(diff, /sha512-after/);
+      assert.match(diff, /NON_REGISTRY_RESOLVED/);
+      assert.match(diff, /https:\/\/mirror.example\/unchanged.tgz/);
+    });
+  }
 });

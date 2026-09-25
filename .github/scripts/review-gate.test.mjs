@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
@@ -7,7 +7,7 @@ import { aggregateReviews, readReports, renderSummary } from './review-gate.mjs'
 
 const head = 'a'.repeat(40);
 const base = 'b'.repeat(40);
-const plan = { head, base, overflow: false, chunks: [{ id: 'chunk-001' }, { id: 'chunk-002' }], skipped: [], lockSummaries: [], uncovered: [] };
+const plan = { files: [], head, base, overflow: false, chunks: [{ id: 'chunk-001' }, { id: 'chunk-002' }], skipped: [], lockSummaries: [], uncovered: [] };
 const report = (chunkId, changes = {}) => JSON.stringify({
   reviewed_head: head, reviewed_base: base, chunk_id: chunkId, complete: true,
   verdict: 'pass', summary: 'Inspected assigned changes.', findings: [], limitations: [], ...changes,
@@ -60,17 +60,34 @@ describe('aggregate independent review gate', () => {
     assert.match(JSON.stringify(aggregate({ plan: { ...plan, overflow: true, uncovered: [{ path: 'uncovered.ts' }] } })), /uncovered.ts/);
   });
 
-  test('only binary/asset-only skipped review can pass without a model, with explicit summary', () => {
-    const skipped = [{ path: 'photo.png', reason: 'asset', size: 20 }, { path: 'blob.bin', reason: 'binary', size: 30 }];
-    const emptyPlan = { ...plan, chunks: [], skipped };
+  test('zero chunks pass only when every changed file is a confirmed allowlisted asset binary', () => {
+    const skipped = [
+      { path: 'photo.png', oldPath: 'photo.png', reason: 'asset_binary', size: 20, added: null, removed: null },
+      { path: 'sound.m4a', oldPath: 'sound.m4a', reason: 'asset_binary', size: 30, added: null, removed: null },
+    ];
+    const emptyPlan = { ...plan, chunks: [], skipped, files: skipped };
     const result = aggregate({ plan: emptyPlan, reports: [], reviewerResult: 'skipped' });
     assert.equal(result.complete, true);
     assert.match(result.summary, /photo.png/);
-    assert.match(result.summary, /blob.bin/);
-    for (const reason of ['deleted-large', 'generated']) {
-      assert.equal(aggregate({ plan: { ...emptyPlan, skipped: [{ path: 'other', reason }] }, reports: [], reviewerResult: 'skipped' }).complete, false);
+    assert.match(result.summary, /sound.m4a/);
+    for (const changes of [
+      { path: 'code.js', oldPath: 'code.js' }, { path: 'assets/model.bin', oldPath: 'assets/model.bin' },
+      { path: '.github/photo.png', oldPath: '.github/photo.png' },
+      { oldPath: 'code.js' }, { added: 1, removed: 0 }, { reason: 'binary' },
+    ]) {
+      const forgedSkip = { ...skipped[0], ...changes };
+      const invalidPlan = { ...emptyPlan, skipped: [forgedSkip], files: [forgedSkip] };
+      assert.equal(aggregate({ plan: invalidPlan, reports: [], reviewerResult: 'skipped' }).complete, false);
     }
-    assert.equal(aggregate({ plan: { ...emptyPlan, lockSummaries: [{ path: 'yarn.lock' }] }, reports: [], reviewerResult: 'skipped' }).complete, false);
+    for (const invalidPlan of [
+      { ...emptyPlan, files: [...skipped, { path: 'unaccounted.js' }] },
+      { ...emptyPlan, files: [{ ...skipped[0], path: 'other.png' }, skipped[1]] },
+      { ...emptyPlan, lockSummaries: [{ path: 'package-lock.json' }] },
+      { ...emptyPlan, uncovered: [{ path: 'bad.js', reason: 'unreviewable_binary' }] },
+      { ...emptyPlan, skipped: [], files: [] },
+    ]) {
+      assert.equal(aggregate({ plan: invalidPlan, reports: [], reviewerResult: 'skipped' }).complete, false);
+    }
   });
 
   test('escapes model output and skipped paths in the step summary', () => {
@@ -94,26 +111,56 @@ describe('downloaded artifact structure', () => {
     assert.match(uploadStep, /          name: codex-review-\$\{\{ matrix.chunk \}\}/);
   });
 
-  test('requires one correctly named report per artifact directory and rejects extra files', (context) => {
-    const directory = mkdtempSync(join(tmpdir(), 'review-gate-'));
-    context.after(() => rmSync(directory, { recursive: true, force: true }));
-    const artifact = join(directory, 'codex-review-chunk-001');
-    mkdirSync(artifact);
-    writeFileSync(join(artifact, 'chunk-001.json'), report('chunk-001'));
-    assert.deepEqual(readReports(directory), [{ id: 'chunk-001', text: report('chunk-001') }]);
-    writeFileSync(join(artifact, 'extra.json'), report('chunk-001'));
-    assert.throws(() => readReports(directory), /exactly one/);
+  test('workflow downloads all chunk reports into one flat directory', () => {
+    const workflow = readFileSync(new URL('../workflows/codex-review.yml', import.meta.url), 'utf8');
+    const downloadStep = workflow.match(/      - uses: actions\/download-artifact@[\s\S]*?(?=\n      - name:)/)?.[0];
+    assert.ok(downloadStep);
+    assert.match(downloadStep, /          merge-multiple: true/);
   });
 
-  test('rejects unexpected artifact names and report filenames', (context) => {
+  for (const count of [1, 2]) {
+    test(`validates a flat download containing ${count} chunk report(s)`, (context) => {
+      const directory = mkdtempSync(join(tmpdir(), 'review-gate-'));
+      context.after(() => rmSync(directory, { recursive: true, force: true }));
+      const chunks = plan.chunks.slice(0, count);
+      for (const chunk of chunks) {
+        writeFileSync(join(directory, chunk.id + '.json'), report(chunk.id));
+      }
+      const downloaded = readReports(directory);
+      assert.equal(aggregate({ plan: { ...plan, chunks }, reports: downloaded }).complete, true);
+      writeFileSync(join(directory, 'chunk-999.json'), report('chunk-999'));
+      assert.equal(aggregate({ plan: { ...plan, chunks }, reports: readReports(directory) }).complete, false);
+      rmSync(join(directory, 'chunk-999.json'));
+      rmSync(join(directory, chunks[0].id + '.json'));
+      assert.equal(aggregate({ plan: { ...plan, chunks }, reports: readReports(directory) }).complete, false);
+    });
+  }
+
+  test('a report chunk_id must match its flat filename', (context) => {
     const directory = mkdtempSync(join(tmpdir(), 'review-gate-'));
     context.after(() => rmSync(directory, { recursive: true, force: true }));
-    mkdirSync(join(directory, 'codex-review-unplanned'));
-    assert.throws(() => readReports(directory), /Unexpected review artifact/);
-    rmSync(join(directory, 'codex-review-unplanned'), { recursive: true });
-    const artifact = join(directory, 'codex-review-chunk-001');
-    mkdirSync(artifact);
-    writeFileSync(join(artifact, 'chunk-002.json'), report('chunk-002'));
-    assert.throws(() => readReports(directory), /Unexpected report file/);
+    writeFileSync(join(directory, 'chunk-001.json'), report('chunk-002'));
+    assert.equal(aggregate({ plan: { ...plan, chunks: [plan.chunks[0]] }, reports: readReports(directory) }).complete, false);
+  });
+
+  for (const name of ['extra.json', 'chunk-01.json', 'chunk-001.json.bak', 'chunk-001.json\n', 'chunk-x.json']) {
+    test(`rejects unexpected flat report filename ${JSON.stringify(name)}`, (context) => {
+      const directory = mkdtempSync(join(tmpdir(), 'review-gate-'));
+      context.after(() => rmSync(directory, { recursive: true, force: true }));
+      writeFileSync(join(directory, name), report('chunk-001'));
+      assert.throws(() => readReports(directory), /Unexpected report/);
+    });
+  }
+
+  test('refuses artifact directories and correctly named symlinks instead of following them', (context) => {
+    const directory = mkdtempSync(join(tmpdir(), 'review-gate-'));
+    context.after(() => rmSync(directory, { recursive: true, force: true }));
+    const nested = join(directory, 'codex-review-chunk-001');
+    mkdirSync(nested);
+    writeFileSync(join(nested, 'chunk-001.json'), report('chunk-001'));
+    assert.throws(() => readReports(directory), /Unexpected report/);
+    rmSync(nested, { recursive: true });
+    symlinkSync('../outside.json', join(directory, 'chunk-001.json'));
+    assert.throws(() => readReports(directory), /Unexpected report/);
   });
 });
