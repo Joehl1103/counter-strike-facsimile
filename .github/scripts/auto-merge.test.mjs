@@ -31,6 +31,7 @@ const effectiveRules = [
 ];
 
 function createGhRunner({ pullRequest = qualifyingPullRequest, rules = effectiveRules, postMerge = null,
+  rulesError = null, mainSha = expected.base, repositoryData = { private: true },
   mergeError = null, mergeCommit = { sha: 'c'.repeat(40), parents: [{ sha: expected.base }] } } = {}) {
   const calls = [];
   let pullRequestLookups = 0;
@@ -38,6 +39,15 @@ function createGhRunner({ pullRequest = qualifyingPullRequest, rules = effective
     calls,
     runGh: async (argumentsForGh) => {
       calls.push(argumentsForGh);
+      if (argumentsForGh[1] === `repos/${expected.repository}/branches/main`) {
+        return { stdout: JSON.stringify({ commit: { sha: mainSha } }) };
+      }
+      if (argumentsForGh[1] === `repos/${expected.repository}`) {
+        return { stdout: JSON.stringify(repositoryData) };
+      }
+      if (argumentsForGh[1]?.endsWith('/rules/branches/main') && rulesError) {
+        throw rulesError;
+      }
       if (argumentsForGh[0] === 'api' && argumentsForGh[1].includes('/pulls/')) {
         pullRequestLookups += 1;
         return { stdout: JSON.stringify(pullRequestLookups === 1 ? pullRequest : (postMerge ?? pullRequest)) };
@@ -173,4 +183,98 @@ test('coordinator immediate mode never arms a queued merge',async()=>{
  assert.ok(!runner.calls.find(c=>c[0]==='pr').includes('--auto'));
  const waiting=createGhRunner({postMerge:{...qualifyingPullRequest,auto_merge:{merge_method:'squash'}}});
  await assert.rejects(runAutoMerge({expected,runGh:waiting.runGh,allowQueue:false}));
+});
+
+const upgradeMessage = 'Upgrade to GitHub Pro or make this repository public to enable this feature.';
+const planLimitedError = Object.assign(new Error('gh command failed'), {
+  stderr: `gh: ${upgradeMessage} (HTTP 403)`,
+});
+const mergedPullRequest = {
+  ...qualifyingPullRequest, state: 'closed', merged: true, merge_commit_sha: 'c'.repeat(40),
+};
+
+test('self-enforced plan fallback checks live main then immediately squash merges the exact head', async () => {
+  for (const rulesError of [planLimitedError, new Error(`gh: ${upgradeMessage} (HTTP 403)`)]) {
+    const runner = createGhRunner({ rulesError, postMerge: mergedPullRequest });
+    const result = await runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' });
+
+    assert.equal(result.outcome, 'merged');
+    assert.deepEqual(runner.calls.slice(2, 4), [
+      ['api', `repos/${expected.repository}/branches/main`],
+      ['pr', 'merge', '119', '--repo', expected.repository, '--squash', '--match-head-commit', expected.head],
+    ]);
+  }
+});
+
+test('self-enforced fallback refuses a different live main without merging', async () => {
+  const runner = createGhRunner({ rulesError: planLimitedError, mainSha: 'd'.repeat(40) });
+  await assert.rejects(runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' }), /main/);
+  assert.equal(runner.calls.some((call) => call[0] === 'pr'), false);
+});
+
+test('self-enforcement requires an explicit immediate merge request', async () => {
+  for (const options of [{}, { allowQueue: false }, { rulesMode: 'self_enforced' },
+    { rulesMode: 'self_enforced', allowQueue: true }]) {
+    const runner = createGhRunner({ rulesError: planLimitedError, postMerge: mergedPullRequest });
+    await assert.rejects(runAutoMerge({ expected, runGh: runner.runGh, ...options }));
+    assert.equal(runner.calls.some((call) => call[0] === 'pr'), false);
+  }
+  // Reject the invalid option combination even when native rules are available.
+  const runner = createGhRunner({ postMerge: mergedPullRequest });
+  await assert.rejects(runAutoMerge({ expected, runGh: runner.runGh, rulesMode: 'self_enforced', allowQueue: true }));
+  assert.equal(runner.calls.some((call) => call[0] === 'pr'), false);
+});
+
+test('other gh failures never authorize self-enforced merging', async () => {
+  for (const rulesError of [
+    new Error('gh: permission denied (HTTP 403)'),
+    new Error(`gh: ${upgradeMessage} (HTTP 500)`),
+    new Error(`gh: ${upgradeMessage} (HTTP 404)`),
+    new Error(upgradeMessage),
+    new Error('network unavailable'),
+  ]) {
+    const runner = createGhRunner({ rulesError, postMerge: mergedPullRequest });
+    await assert.rejects(runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' }));
+    assert.equal(runner.calls.some((call) => call[0] === 'pr'), false);
+  }
+});
+
+test('available rules remain strict even when self-enforced mode was requested', async () => {
+  for (const rules of [{}, [effectiveRules[0]]]) {
+    const runner = createGhRunner({ rules, postMerge: mergedPullRequest });
+    await assert.rejects(runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' }));
+    assert.equal(runner.calls.some((call) => call[0] === 'pr'), false);
+  }
+  const runner = createGhRunner({ postMerge: mergedPullRequest });
+  assert.equal((await runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' })).outcome, 'merged');
+  assert.equal(runner.calls.some((call) => call[1]?.endsWith('/branches/main') && !call[1].includes('/rules/')), false);
+});
+
+test('empty rules require private visibility and explicit self-enforced immediate mode', async () => {
+  const runner = createGhRunner({ rules: [], postMerge: mergedPullRequest });
+  assert.equal((await runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' })).outcome, 'merged');
+  assert.deepEqual(runner.calls.slice(2, 4), [
+    ['api', `repos/${expected.repository}`],
+    ['api', `repos/${expected.repository}/branches/main`],
+  ]);
+  for (const repositoryData of [{ private: false }, {}, null]) {
+    const denied = createGhRunner({ rules: [], repositoryData, postMerge: mergedPullRequest });
+    await assert.rejects(runAutoMerge({ expected, runGh: denied.runGh, allowQueue: false, rulesMode: 'self_enforced' }));
+    assert.equal(denied.calls.some((call) => call[0] === 'pr'), false);
+  }
+  const standalone = createGhRunner({ rules: [], postMerge: mergedPullRequest });
+  await assert.rejects(runAutoMerge({ expected, runGh: standalone.runGh }));
+  assert.equal(standalone.calls.some((call) => call[0] === 'pr'), false);
+});
+
+test('self-enforced mode retains post-merge identity and squash-parent verification and never reports armed', async () => {
+  for (const overrides of [
+    { postMerge: { ...qualifyingPullRequest, auto_merge: { merge_method: 'squash' } } },
+    { postMerge: { ...mergedPullRequest, head: { sha: 'd'.repeat(40) } } },
+    { mergeCommit: { sha: 'c'.repeat(40), parents: [{ sha: 'd'.repeat(40) }] } },
+    { mergeCommit: { sha: 'c'.repeat(40), parents: [{ sha: expected.base }, { sha: expected.head }] } },
+  ]) {
+    const runner = createGhRunner({ rulesError: planLimitedError, postMerge: mergedPullRequest, ...overrides });
+    await assert.rejects(runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' }));
+  }
 });

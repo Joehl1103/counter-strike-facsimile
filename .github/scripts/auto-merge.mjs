@@ -11,6 +11,38 @@ const REQUIRED_CHECKS = [
   'Independent Codex review',
 ];
 const GITHUB_ACTIONS_INTEGRATION_ID = 15368;
+export const PLAN_LIMIT_MESSAGE = 'Upgrade to GitHub Pro or make this repository public to enable this feature.';
+
+// REST errors carry a sanitized flag; gh reports the status and message in text.
+export function isPlanLimitedRulesError(error) {
+  if (error?.status !== undefined) {
+    return error.status === 403 && error.planLimited === true;
+  }
+  return [error?.stderr, error?.message].some((message) =>
+    typeof message === 'string' && message.includes(PLAN_LIMIT_MESSAGE) && message.includes('HTTP 403'));
+}
+
+// Only the known plan limitation or confirmed private empty rules can fall back.
+export async function resolveRulesMode({ effectiveRules, repository }) {
+  let rules;
+  try {
+    rules = await effectiveRules();
+  } catch (error) {
+    if (isPlanLimitedRulesError(error)) {
+      return 'self_enforced';
+    }
+    throw error;
+  }
+
+  if (Array.isArray(rules) && rules.length === 0) {
+    const repositoryDetails = await repository();
+    if (repositoryDetails?.private === true) {
+      return 'self_enforced';
+    }
+  }
+  validateEffectiveRules(rules);
+  return 'github_rules';
+}
 
 function requireValue(value, name) {
   assert.ok(value, `${name} is required.`);
@@ -67,16 +99,31 @@ function parseJson(commandResult, description) {
   }
 }
 
-export async function runAutoMerge({ expected, runGh, allowQueue = true }) {
+export async function runAutoMerge({ expected, runGh, allowQueue = true, rulesMode = 'github_rules' }) {
+  assert.ok(['github_rules', 'self_enforced'].includes(rulesMode), 'Unknown rules mode.');
+  if (rulesMode === 'self_enforced') {
+    assert.equal(allowQueue, false, 'Self-enforced mode requires allowQueue: false.');
+  }
   const pullRequest = parseJson(await runGh([
     'api', `repos/${expected.repository}/pulls/${expected.number}`,
   ]), 'Pull request lookup');
   validateCandidate(pullRequest, expected);
 
-  const effectiveRules = parseJson(await runGh([
-    'api', `repos/${expected.repository}/rules/branches/main`,
-  ]), 'Effective main rules lookup');
-  validateEffectiveRules(effectiveRules);
+  const currentRulesMode = await resolveRulesMode({
+    effectiveRules: async () => parseJson(await runGh([
+      'api', `repos/${expected.repository}/rules/branches/main`,
+    ]), 'Effective main rules lookup'),
+    repository: async () => parseJson(await runGh([
+      'api', `repos/${expected.repository}`,
+    ]), 'Repository visibility lookup'),
+  });
+  if (currentRulesMode === 'self_enforced') {
+    assert.equal(rulesMode, 'self_enforced', 'Plan-limited rules require coordinator self-enforcement.');
+    const main = parseJson(await runGh([
+      'api', `repos/${expected.repository}/branches/main`,
+    ]), 'Live main lookup');
+    assert.equal(main.commit?.sha, expected.base, 'Live main changed from the reviewed base.');
+  }
 
   if (pullRequest.auto_merge && allowQueue) {
     assert.equal(pullRequest.auto_merge.merge_method, 'squash',

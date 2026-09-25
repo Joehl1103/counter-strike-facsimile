@@ -53,6 +53,7 @@ function createGithub(snapshots, changes = {}) {
       return structuredClone(source);
     },
     async effectiveRules() { calls.push(['effectiveRules']); return changes.rules ?? effectiveRules; },
+    async repository() { return { private: false }; },
     async update(pr, expectedHead) { calls.push(['update', pr.number, expectedHead]); },
     async merge(pr, expectedHead, expectedBase) {
       calls.push(['merge', pr.number, expectedHead, expectedBase]);
@@ -279,4 +280,177 @@ test('persistent merge refusal tags once and does not starve another validated P
  await coordinate({github,repository});await coordinate({github,repository});
  assert.equal(github.calls.filter(c=>c[0]==='comment'&&c[2].includes('merge_refused')).length,1);
  assert.equal(github.calls.filter(c=>c[0]==='merge'&&c[1]===2).length,2);
+});
+
+function planLimitedGithub(candidate = snapshot(1), changes = {}) {
+  const github = createGithub([candidate], changes);
+  github.effectiveRules = async () => {
+    github.calls.push(['effectiveRules']);
+    throw Object.assign(new Error('GitHub GET failed (403); response omitted.'), {
+      status: 403, planLimited: true,
+    });
+  };
+  const originalMerge = github.merge;
+  github.merge = async (pr, expectedHead, expectedBase, options) => {
+    github.mergeOptions = options;
+    return originalMerge(pr, expectedHead, expectedBase);
+  };
+  return github;
+}
+
+test('plan-limited rules reuse all green gates and pass self_enforced to the merge', async () => {
+  const github = planLimitedGithub();
+  const result = await coordinate({ github, repository });
+
+  assert.equal(result.rulesMode, 'self_enforced');
+  assert.equal(result.results[0].outcome, 'merged');
+  assert.deepEqual(github.mergeOptions, { rulesMode: 'self_enforced' });
+  assert.deepEqual(github.calls.find((call) => call[0] === 'merge'), ['merge', 1, head, base]);
+  assert.equal(github.calls.at(-2)[0], 'effectiveRules');
+});
+
+const unsafeCandidates = [
+  ...REQUIRED_CHECKS.flatMap((name) => [
+    [`missing ${name}`, { checks: snapshot(1).checks.filter((check) => check.name !== name) }],
+    [`failed ${name}`, { checks: snapshot(1).checks.map((check) => ({
+      ...check, state: check.name === name ? 'failure' : 'success',
+    })) }],
+  ]),
+  ['stale review head', { review: { passed: true, head: 'd'.repeat(40), base } }],
+  ['stale review base', { review: { passed: true, head, base: 'd'.repeat(40) } }],
+  ['behind main', { behind: true }],
+  ['main differs from PR base', { baseSha: 'd'.repeat(40) }],
+  ['draft', { pr: { draft: true } }],
+  ['unresolved thread', { conversationsResolved: false }],
+];
+
+for (const [reason, changes] of unsafeCandidates) {
+  test(`self-enforced mode never merges with ${reason}`, async () => {
+    const github = planLimitedGithub(snapshot(1, changes));
+    const result = await coordinate({ github, repository });
+
+    assert.equal(result.rulesMode, 'self_enforced');
+    assert.equal(github.calls.some((call) => call[0] === 'merge'), false);
+  });
+
+  test(`self-enforced final snapshot refuses a race to ${reason}`, async () => {
+    const original = snapshot(1);
+    const changed = snapshot(1, changes);
+    const github = planLimitedGithub(original, { snapshotSequence: [original, changed, changed] });
+    await coordinate({ github, repository });
+
+    assert.equal(github.calls.some((call) => call[0] === 'merge'), false);
+  });
+}
+
+test('rules errors and malformed responses refuse before every kind of mutation', async () => {
+  for (const candidate of [snapshot(1), snapshot(1, { behind: true }),
+    snapshot(1, { conversationsResolved: false }),
+    snapshot(1, { checks: [{ name: 'Game checks', state: 'failure', kind: 'infrastructure', runId: 42 }] })]) {
+    for (const status of [500, 403, 404, undefined]) {
+      const github = createGithub([candidate]);
+      github.effectiveRules = async () => {
+        throw Object.assign(new Error('Rules unavailable'), { status });
+      };
+      await assert.rejects(coordinate({ github, repository }));
+      assert.equal(github.calls.some((call) => ['merge', 'update', 'rerun', 'comment'].includes(call[0])), false);
+    }
+    const github = createGithub([candidate], { rules: { message: 'malformed' } });
+    await assert.rejects(coordinate({ github, repository }));
+    assert.equal(github.calls.some((call) => ['merge', 'update', 'rerun', 'comment'].includes(call[0])), false);
+  }
+});
+
+test('empty rules fall back only after confirmed private visibility', async () => {
+  for (const isPrivate of [true, false, undefined]) {
+    const github = createGithub([snapshot(1)], { rules: [] });
+    github.repository = async () => ({ private: isPrivate });
+    if (isPrivate === true) {
+      const result = await coordinate({ github, repository });
+      assert.equal(result.rulesMode, 'self_enforced');
+      assert.equal(result.results[0].outcome, 'merged');
+    } else {
+      await assert.rejects(coordinate({ github, repository }), /main must require pull requests/);
+      assert.equal(github.calls.some((call) => ['merge', 'update', 'rerun', 'comment'].includes(call[0])), false);
+    }
+  }
+  const github = createGithub([snapshot(1)], { rules: [] });
+  github.repository = async () => { throw new Error('Visibility unavailable'); };
+  await assert.rejects(coordinate({ github, repository }), /Visibility unavailable/);
+});
+
+test('available rules keep strict validation and report github_rules', async () => {
+  const github = createGithub([snapshot(1)]);
+  github.repository = async () => assert.fail('Available rules must not consult visibility');
+  const result = await coordinate({ github, repository });
+  assert.equal(result.rulesMode, 'github_rules');
+  assert.equal(result.results[0].outcome, 'merged');
+});
+
+test('self-enforced updates, notices, retry records and reruns re-resolve rules before each write', async () => {
+  const retryCandidate = snapshot(1, { checks: [
+    { name: 'Repository checks', state: 'failure', runId: 42, kind: 'infrastructure' },
+  ] });
+  for (const [candidate, expectedWrites] of [
+    [snapshot(1, { behind: true }), ['update']],
+    [snapshot(1, { conversationsResolved: false }), ['comment']],
+    [retryCandidate, ['comment', 'rerun']],
+  ]) {
+    const github = planLimitedGithub(candidate);
+    const result = await coordinate({ github, repository,
+      triage: async () => ({ route: 'retry_ci', confidence: 1, probability: 1, reasonCode: 'runner_timeout' }),
+    });
+    const writes = github.calls.filter((call) => ['update', 'merge', 'comment', 'rerun'].includes(call[0]));
+    assert.equal(result.rulesMode, 'self_enforced');
+    assert.deepEqual(writes.map((call) => call[0]), expectedWrites);
+    for (const write of writes) {
+      const writeIndex = github.calls.indexOf(write);
+      assert.equal(github.calls[writeIndex - 1][0], 'effectiveRules');
+    }
+  }
+});
+
+test('losing rules access after the initial decision prevents updates, comments, retries and merges', async () => {
+  for (const candidate of [snapshot(1), snapshot(1, { behind: true }),
+    snapshot(1, { conversationsResolved: false }),
+    snapshot(1, { checks: [{ name: 'Game checks', state: 'failure', runId: 42, kind: 'infrastructure' }] })]) {
+    const github = createGithub([candidate]);
+    let rulesReads = 0;
+    github.effectiveRules = async () => {
+      rulesReads += 1;
+      if (rulesReads > 1) {
+        throw Object.assign(new Error('Rules access lost'), { status: 403 });
+      }
+      return effectiveRules;
+    };
+    try {
+      await coordinate({ github, repository,
+        triage: async () => ({ route: 'retry_ci', confidence: 1, probability: 1, reasonCode: 'runner_timeout' }),
+      });
+    } catch (error) {
+      assert.equal(error.message, 'Rules access lost');
+    }
+    assert.ok(rulesReads > 1);
+    assert.equal(github.calls.some((call) => ['update', 'merge', 'comment', 'rerun'].includes(call[0])), false);
+  }
+});
+
+test('the mode passed to merge is resolved immediately before the merge', async () => {
+  for (const finalMode of ['self_enforced', 'github_rules']) {
+    const github = planLimitedGithub();
+    const planLimitedRules = github.effectiveRules;
+    let rulesReads = 0;
+    github.effectiveRules = async () => {
+      rulesReads += 1;
+      const useFallback = finalMode === 'self_enforced' ? rulesReads > 1 : rulesReads === 1;
+      if (useFallback) {
+        return planLimitedRules();
+      }
+      return effectiveRules;
+    };
+    const result = await coordinate({ github, repository });
+    assert.equal(result.results[0].outcome, 'merged');
+    assert.equal(result.rulesMode, finalMode);
+    assert.deepEqual(github.mergeOptions, { rulesMode: finalMode });
+  }
 });

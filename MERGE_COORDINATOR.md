@@ -13,7 +13,7 @@ fresh evidence. Published branches are updated by merging main, never force-push
 | Draft | Wait until its owner marks it ready. |
 | Clean branch behind main | GitHub update-branch with the expected head SHA. |
 | CI/review running | Wait; no Jev call. |
-| All required evidence passes on current head/base | Protected squash merge; no Jev call. |
+| All required evidence passes on current head/base | Validated squash merge; no Jev call. |
 | Cancelled/timed-out CI | Jev may select one retry per head/base/run; new checks still must pass. |
 | Conflicts, code/test/performance failure, review findings, uncertainty | Mention @Joehl1103 with the candidate and reason. |
 
@@ -57,13 +57,35 @@ personal CLI token just to avoid provisioning the repository-scoped credential.
 The separate `codex-review` environment needs its own `OLLAMA_CLOUD_API`; TypeSafe
 is not a replacement for independent code review.
 
-The coordinator verifies effective main rules and all three checks. CI checks
-must come from GitHub Actions' CI PR workflow for the current head; test-merge
+The coordinator resolves effective main rules before every mutation and verifies
+all three checks. Nonempty rules use strict `github_rules` validation. A 403 with
+the exact GitHub plan-upgrade message, or empty rules with a confirmed private
+repository, selects `self_enforced`; other errors or malformed rules fail closed.
+Each tick reports `rulesMode` and logs `Rules mode: github_rules` or
+`Rules mode: self_enforced` with an explanation of coordinator enforcement.
+
+CI checks must come from GitHub Actions' CI PR workflow for the current head; test-merge
 checks supersede head checks. The Codex status includes both immutable head and
-base. Review threads and changes-requested decisions must be resolved. GitHub's
-strict native rules remain the last enforcement point. The merge helper uses the
-expected head and confirms the actual squash commit parent. It does not queue
-an unvalidated merge or use an administrator bypass.
+base. Review threads and changes-requested decisions must be resolved. Before
+merging, a fresh snapshot must still show a ready, non-draft PR, all three checks
+passing, exact passing review, and PR base equal to live main with no commits
+behind. In `github_rules` mode, GitHub's strict native rules remain the last
+enforcement point.
+
+In `self_enforced` mode, the coordinator's checks are the only enforcement.
+The merge helper rechecks rules (validating strictly if available), verifies live
+main still equals the reviewed base, then uses direct
+`gh pr merge --squash --match-head-commit` with the expected head, never `--auto`.
+It requires a completed merge, unchanged head, and a single-parent squash commit
+whose parent equals the reviewed base. It never uses an administrator bypass.
+
+Private Free repositories do not block direct pushes, force pushes, deletion of
+main, or human merges that skip checks. Environment deployment-branch restrictions
+may also be unenforced on this plan. A concurrent main change between the final
+lookup and merge cannot be blocked by this fallback; parent verification detects
+it afterward. Upgrading to Pro or making the repository public restores native
+rules and strict `github_rules` mode automatically when effective rules return;
+missing or weakened rules still refuse.
 
 ## Human handoff and recovery
 
@@ -84,7 +106,8 @@ No issue is automatically closed and no hosting deployment is included.
 ## Activation and verification
 
 This bootstrap excludes game code, raw assets, private history and local archives.
-Apply [.github/main-ruleset.json](.github/main-ruleset.json) after initial main is
+When the repository plan supports rules, apply
+[.github/main-ruleset.json](.github/main-ruleset.json) after initial main is
 created. Permit squash merges only, prevent main deletion/force pushes, require
 PRs and all three checks without bypass actors. Enable repository auto-merge;
 keep automatic branch deletion disabled. Initial publication and end-to-end
