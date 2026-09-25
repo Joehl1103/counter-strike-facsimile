@@ -1,5 +1,56 @@
 # JKH-160 / JKH-119 presentation optimization
 
+## Round 2: coordinator measurements and next candidate
+
+Coordinator-reported Linux x86_64 / Node 22.23.2 measurements, ten runs per
+exact tree: `0a01ac7` median p95 0.6635 ms, max 0.7228 ms, official passes
+0/10; `f66744e` median 0.6064 ms, max 0.6587 ms, min 0.4965 ms, official
+passes 0/10. These are the supplied results, including the reported minimum
+and pass count. The approximately 9% gain is insufficient. GitHub Actions
+baseline p95 was 1.0514 ms. The new desired reference-box target is
+approximately 0.25–0.30 ms; the official 0.5 ms gate is unchanged.
+
+Round 2 builder base: `f66744e`. Owned files expand to the deformation module,
+`app/secondary-weapon-models.ts`, and this record. Plan: replace nested vertex
+groups with flat retained buffers, cache each segment by its exact angle inputs,
+and freeze factory-owned static merged weapon meshes after auditing transform
+writes. Keep per-frame output, rounding, topology and public buffer identities.
+Run the same permitted checks, retain separate round-2 logs, and commit locally.
+Live Linear activity and issue/parent/dependency timelines were reread; no
+scope/status change supersedes the coordinator's current optimization request.
+Independent review, Linux timing and tracker publication remain coordinator work.
+
+Round 2 implementation and validation:
+
+- Replaced per-vertex-group array objects/nested loops with flat representative
+  and copy-offset buffers. Foot translation and normal correction use the same
+  flat layout, with no per-frame allocation or topology changes.
+- Each segment retains its shape before planting, keyed by its exact sanitized
+  hinge angle(s), including signed zero. Unchanged segments reuse this output;
+  every call bulk-copies all positions/normals back to the public attributes,
+  so previous foot corrections and resets cannot leave stale geometry.
+- The retained buffers keep position X and normal X at bind because every
+  hinge rotates around X. Changed Y/Z components preserve the original ordered
+  knee/ankle calculations and Float32 writes, then share one flat expansion loop.
+- `secondary-weapon-models.ts` composes each newly merged static mesh's identity
+  local matrix once and disables its automatic local composition. World updates
+  still run normally. Audit: consolidated meshes are newly created after source
+  transforms are baked; `app/page.tsx` moves weapon roots and muzzle lights;
+  `viewmodel-reload-visuals.ts` moves only excluded magazines/support hands.
+  Named/tagged mesh references across `app/` contain no local transform writers
+  for these merged meshes. Roots, helper nodes and supplied effects remain dynamic.
+- Local Node v24.5.0: regression **693 passed, 0 failed/skipped** (11.360 s),
+  typecheck and lint exit 0, diff whitespace check passed. Focused existing
+  limb/secondary checks passed 26/26 before the final X-component optimization;
+  the full regression suite above includes that optimization.
+- Logs: `outputs/jkh-160-performance/round-2/`. Tests, package files and `.github/`
+  remain unchanged. No performance command, build, browser or server ran.
+- Candidate timing is **unverified**. Expected benefit is fewer small-array
+  traversals/scalar writes, no recomputation for unchanged hinges, and fewer
+  local matrix compositions. Added caches cost setup memory. Existing checks
+  detect no behavior regression; exhaustive previous-versus-current output
+  comparison and reference-box p95 remain coordinator validation.
+
 ## Frozen builder plan and acceptance card
 
 - Worker: Codex builder, 2026-09-24; coordinator owns Linux measurement,
@@ -33,7 +84,7 @@
   the authorized worktree. Direct personal-vault search found no matching note.
   Durable findings will remain here; external memory capture is not authorized.
 
-## Results
+## Round 1 results (f66744e; historical)
 
 Implemented in `app/character-limb-deformation.ts`:
 
@@ -78,12 +129,12 @@ the source-backed implementation findings are retained in this record.
 
 ## Coordinator handoff / project activity draft
 
-JKH-160 / JKH-119 bounded optimization delivered as a local commit on
+JKH-160 / JKH-119 round-2 optimization delivered as a new local commit on
 `feature/jkh-119-game-baseline-snapshot`; no push. Regression 693/693,
 typecheck and lint pass. Frozen benchmark and CI unchanged. Candidate performance
 and independent review are unverified. Next: measure the exact commit on the
 reference Linux x86_64 / Node 22.23.2 box with the unchanged performance command;
-target p95 approximately 0.35 ms or lower, required gate strictly below 0.5 ms.
+target p95 approximately 0.25–0.30 ms, required gate strictly below 0.5 ms.
 Retain raw runs, arrange independent review, and keep PR #9 draft until its
 required evidence passes. This completes the assigned local builder segment;
 no Joseph decision is needed. Coordinator owns tracker reconciliation and

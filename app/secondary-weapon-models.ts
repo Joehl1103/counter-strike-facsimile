@@ -580,6 +580,11 @@ function consolidateWeaponMeshes(root: THREE.Group, kind: SecondaryWeaponKind) {
     value.userData.secondaryWeaponGeometry = true;
     value.castShadow = true;
     value.receiveShadow = true;
+    // These merged vertices already include every source part's local
+    // transform. Only the owning weapon root moves; reload magazines and
+    // supplied muzzle effects were excluded from this consolidation.
+    value.updateMatrix();
+    value.matrixAutoUpdate = false;
     root.add(value);
     materialIndex += 1;
   });

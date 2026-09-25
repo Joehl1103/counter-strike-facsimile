@@ -52,18 +52,21 @@ export const CHARACTER_RENDERED_FOOT_PLANT_HEIGHT = 0.005;
 /** Maximum visual stretch before a planted boot is allowed to slide. */
 export const CHARACTER_RENDERED_FOOT_MAX_CORRECTION = 0.28;
 
-type DeformationOperation = Readonly<{
-  start: number;
-  end: number;
-  kind: 0 | 1 | 2 | 3 | 4 | 5;
-  pivotY: number;
-  pivotZ: number;
-  secondaryPivotY: number;
-  secondaryPivotZ: number;
-  vertexGroups: readonly Uint32Array[];
-  bindPositionRange: Float32Array;
-  bindNormalRange: Float32Array;
-}>;
+type DeformationOperation = {
+  readonly start: number;
+  readonly end: number;
+  readonly kind: 0 | 1 | 2 | 3 | 4 | 5;
+  readonly pivotY: number;
+  readonly pivotZ: number;
+  readonly secondaryPivotY: number;
+  readonly secondaryPivotZ: number;
+  readonly uniqueOffsets: Uint32Array;
+  readonly copies: Uint32Array;
+  readonly positions: Float32Array;
+  readonly normals: Float32Array;
+  firstAngle: number;
+  secondAngle: number;
+};
 
 /** Per-mesh CPU deformation state. All arrays are allocated during setup. */
 export type CharacterLimbDeformationController = {
@@ -81,8 +84,10 @@ export type CharacterLimbDeformationController = {
   readonly positionAttribute: THREE.BufferAttribute;
   readonly normalAttribute: THREE.BufferAttribute;
   readonly operations: readonly DeformationOperation[];
-  readonly footTranslationGroups: readonly Uint32Array[];
-  readonly footNormalGroups: readonly Uint32Array[];
+  readonly footTranslationOffsets: Uint32Array;
+  readonly footTranslationCopies: Uint32Array;
+  readonly footNormalOffsets: Uint32Array;
+  readonly footNormalCopies: Uint32Array;
   write: (angles?: CharacterLimbDeformationAngles) => void;
   reset: () => void;
 };
@@ -240,6 +245,7 @@ function operationFromRange(
   const kind = segmentOperationKind(metadata.kind, range.segment);
   const pivot = range.pivot;
   const isBoot = metadata.kind === 'leg' && range.segment === 'boot';
+  const vertices = groupIdenticalVertices(range, bindPositions, bindNormals);
   return {
     start: range.start,
     end: range.end,
@@ -249,9 +255,12 @@ function operationFromRange(
     pivotZ: isBoot ? 0 : (pivot?.z ?? 0),
     secondaryPivotY: isBoot ? (pivot?.y ?? 0) : 0,
     secondaryPivotZ: isBoot ? (pivot?.z ?? 0) : 0,
-    vertexGroups: groupIdenticalVertices(range, bindPositions, bindNormals),
-    bindPositionRange: bindPositions.subarray(range.start * 3, range.end * 3),
-    bindNormalRange: bindNormals.subarray(range.start * 3, range.end * 3),
+    uniqueOffsets: vertices.uniqueOffsets,
+    copies: vertices.copies,
+    positions: bindPositions.slice(range.start * 3, range.end * 3),
+    normals: bindNormals.slice(range.start * 3, range.end * 3),
+    firstAngle: Number.NaN,
+    secondAngle: Number.NaN,
   };
 }
 
@@ -260,8 +269,10 @@ function groupIdenticalVertices(
   range: CharacterLimbSegmentRange,
   bindPositions: Float32Array,
   bindNormals: Float32Array,
-): readonly Uint32Array[] {
-  const groups = new Map<string, number[]>();
+): { uniqueOffsets: Uint32Array; copies: Uint32Array } {
+  const representatives = new Map<string, number>();
+  const uniqueOffsets: number[] = [];
+  const copies: number[] = [];
   // Bit keys preserve signed zero as well as exact Float32 identity. Positions
   // also determine the planting weight/slope, so all six inputs must match.
   const positionBits = new Uint32Array(bindPositions.buffer);
@@ -271,40 +282,90 @@ function groupIdenticalVertices(
     const positionKey = `${positionBits[offset]},${positionBits[offset + 1]},${positionBits[offset + 2]}`;
     const normalKey = `${normalBits[offset]},${normalBits[offset + 1]},${normalBits[offset + 2]}`;
     const key = `${positionKey},${normalKey}`;
-    const existing = groups.get(key);
-    if (existing) {
-      existing.push(offset);
+    const localOffset = (vertex - range.start) * 3;
+    const existing = representatives.get(key);
+    if (existing !== undefined) {
+      copies.push(localOffset, existing);
     } else {
-      groups.set(key, [offset]);
+      representatives.set(key, localOffset);
+      uniqueOffsets.push(localOffset);
     }
   }
-  return Array.from(groups.values(), (offsets) => Uint32Array.from(offsets));
+  return {
+    uniqueOffsets: Uint32Array.from(uniqueOffsets),
+    copies: Uint32Array.from(copies),
+  };
+}
+
+/** Expand calculated representatives into the unchanged non-indexed layout. */
+function copyRepeatedVertices(values: Float32Array, copies: Uint32Array): void {
+  for (let index = 0; index < copies.length; index += 2) {
+    const destination = copies[index];
+    const source = copies[index + 1];
+    values[destination] = values[source];
+    values[destination + 1] = values[source + 1];
+    values[destination + 2] = values[source + 2];
+  }
+}
+
+/** Select immutable nonzero influences once, retaining flat copy instructions. */
+function selectInfluencedVertices(
+  operations: readonly DeformationOperation[],
+  influences: Float32Array,
+): { offsets: Uint32Array; copies: Uint32Array } {
+  const offsets: number[] = [];
+  const copies: number[] = [];
+  for (const operation of operations) {
+    const rangeOffset = operation.start * 3;
+    for (const localOffset of operation.uniqueOffsets) {
+      const offset = rangeOffset + localOffset;
+      if (influences[offset / 3] !== 0) {
+        offsets.push(offset);
+      }
+    }
+    for (let index = 0; index < operation.copies.length; index += 2) {
+      const destination = rangeOffset + operation.copies[index];
+      const source = rangeOffset + operation.copies[index + 1];
+      if (influences[destination / 3] !== 0) {
+        copies.push(destination, source);
+      }
+    }
+  }
+  return {
+    offsets: Uint32Array.from(offsets),
+    copies: Uint32Array.from(copies),
+  };
 }
 
 function writeRange(
   operation: DeformationOperation,
   bindPositions: Float32Array,
   bindNormals: Float32Array,
-  positions: THREE.BufferAttribute['array'],
-  normals: THREE.BufferAttribute['array'],
-  kneeSin: number,
-  kneeCos: number,
-  ankleSin: number,
-  ankleCos: number,
-  elbowSin: number,
-  elbowCos: number,
+  knee: number,
+  ankle: number,
+  elbow: number,
 ): void {
   if (operation.kind === 0) {
-    // The upper segment never hinges, but planting may have deformed it on the
-    // previous frame. Restore it with the same bind data, using bulk copies.
-    positions.set(operation.bindPositionRange, operation.start * 3);
-    normals.set(operation.bindNormalRange, operation.start * 3);
+    // Its retained output starts at bind and never receives foot corrections.
     return;
   }
   const hasKnee =
     operation.kind === 1 || operation.kind === 2 || operation.kind === 3;
   const hasAnkle = operation.kind === 3;
-  const hasElbow = operation.kind === 4 || operation.kind === 5;
+  const firstAngle = hasKnee ? knee : elbow;
+  const secondAngle = hasAnkle ? ankle : 0;
+  if (
+    Object.is(operation.firstAngle, firstAngle) &&
+    Object.is(operation.secondAngle, secondAngle)
+  ) {
+    return;
+  }
+  const firstSin = Math.sin(firstAngle);
+  const firstCos = Math.cos(firstAngle);
+  const ankleSin = Math.sin(secondAngle);
+  const ankleCos = Math.cos(secondAngle);
+  const positions = operation.positions;
+  const normals = operation.normals;
   const pivotY = operation.pivotY;
   const pivotZ = operation.pivotZ;
   let anklePivotY = operation.secondaryPivotY;
@@ -312,35 +373,26 @@ function writeRange(
   if (hasAnkle) {
     const ankleDy = anklePivotY - pivotY;
     const ankleDz = anklePivotZ - pivotZ;
-    anklePivotY = pivotY + kneeCos * ankleDy - kneeSin * ankleDz;
-    anklePivotZ = pivotZ + kneeSin * ankleDy + kneeCos * ankleDz;
+    anklePivotY = pivotY + firstCos * ankleDy - firstSin * ankleDz;
+    anklePivotZ = pivotZ + firstSin * ankleDy + firstCos * ankleDz;
   }
-  for (const group of operation.vertexGroups) {
-    const offset = group[0];
-    const x = bindPositions[offset];
+  const uniqueOffsets = operation.uniqueOffsets;
+  const rangeOffset = operation.start * 3;
+  for (let index = 0; index < uniqueOffsets.length; index += 1) {
+    const localOffset = uniqueOffsets[index];
+    const offset = rangeOffset + localOffset;
     let y = bindPositions[offset + 1];
     let z = bindPositions[offset + 2];
-    const nx = bindNormals[offset];
     let ny = bindNormals[offset + 1];
     let nz = bindNormals[offset + 2];
 
-    if (hasKnee) {
-      const dy = y - pivotY;
-      const dz = z - pivotZ;
-      y = pivotY + kneeCos * dy - kneeSin * dz;
-      z = pivotZ + kneeSin * dy + kneeCos * dz;
-      const normalY = kneeCos * ny - kneeSin * nz;
-      nz = kneeSin * ny + kneeCos * nz;
-      ny = normalY;
-    } else if (hasElbow) {
-      const dy = y - pivotY;
-      const dz = z - pivotZ;
-      y = pivotY + elbowCos * dy - elbowSin * dz;
-      z = pivotZ + elbowSin * dy + elbowCos * dz;
-      const normalY = elbowCos * ny - elbowSin * nz;
-      nz = elbowSin * ny + elbowCos * nz;
-      ny = normalY;
-    }
+    const dy = y - pivotY;
+    const dz = z - pivotZ;
+    y = pivotY + firstCos * dy - firstSin * dz;
+    z = pivotZ + firstSin * dy + firstCos * dz;
+    const normalY = firstCos * ny - firstSin * nz;
+    nz = firstSin * ny + firstCos * nz;
+    ny = normalY;
 
     if (hasAnkle) {
       const dy = y - anklePivotY;
@@ -352,16 +404,24 @@ function writeRange(
       ny = normalY;
     }
 
-    for (let corner = 0; corner < group.length; corner += 1) {
-      const destination = group[corner];
-      positions[destination] = x;
-      positions[destination + 1] = y;
-      positions[destination + 2] = z;
-      normals[destination] = nx;
-      normals[destination + 1] = ny;
-      normals[destination + 2] = nz;
-    }
+    positions[localOffset + 1] = y;
+    positions[localOffset + 2] = z;
+    normals[localOffset + 1] = ny;
+    normals[localOffset + 2] = nz;
   }
+  // All hinges rotate around X. The retained buffers never receive planting,
+  // so their position X and normal X stay at bind without any per-frame writes.
+  const copies = operation.copies;
+  for (let index = 0; index < copies.length; index += 2) {
+    const destination = copies[index];
+    const source = copies[index + 1];
+    positions[destination + 1] = positions[source + 1];
+    positions[destination + 2] = positions[source + 2];
+    normals[destination + 1] = normals[source + 1];
+    normals[destination + 2] = normals[source + 2];
+  }
+  operation.firstAngle = firstAngle;
+  operation.secondAngle = secondAngle;
 }
 
 function installConservativeBounds(
@@ -443,12 +503,6 @@ function writeController(
     ),
     CHARACTER_LIMB_MAX_ELBOW_ANGLE,
   );
-  const kneeSin = Math.sin(knee);
-  const kneeCos = Math.cos(knee);
-  const ankleSin = Math.sin(ankle);
-  const ankleCos = Math.cos(ankle);
-  const elbowSin = Math.sin(elbow);
-  const elbowCos = Math.cos(elbow);
   const positions = controller.positionAttribute.array;
   const normals = controller.normalAttribute.array;
   if (knee === 0 && ankle === 0 && elbow === 0) {
@@ -460,19 +514,19 @@ function writeController(
   }
   const operations = controller.operations;
   for (let index = 0; index < operations.length; index += 1) {
+    const operation = operations[index];
     writeRange(
-      operations[index],
+      operation,
       controller.bindPositions,
       controller.bindNormals,
-      positions,
-      normals,
-      kneeSin,
-      kneeCos,
-      ankleSin,
-      ankleCos,
-      elbowSin,
-      elbowCos,
+      knee,
+      ankle,
+      elbow,
     );
+    // Always restore public output, even on a cache hit: planting writes into
+    // those arrays, whereas the retained segment output remains unplanted.
+    positions.set(operation.positions, operation.start * 3);
+    normals.set(operation.normals, operation.start * 3);
   }
   controller.positionAttribute.needsUpdate = true;
   controller.normalAttribute.needsUpdate = true;
@@ -566,19 +620,18 @@ function applyFootLocalTranslation(
 ): void {
   const positions = controller.positionAttribute.array as Float32Array;
   const weights = controller.footPlantWeights;
-  for (const group of controller.footTranslationGroups) {
-    const offset = group[0];
+  const offsets = controller.footTranslationOffsets;
+  for (let index = 0; index < offsets.length; index += 1) {
+    const offset = offsets[index];
     const weight = weights[offset / 3];
     const translatedX = positions[offset] + x * weight;
     const translatedY = positions[offset + 1] + y * weight;
     const translatedZ = positions[offset + 2] + z * weight;
-    for (let corner = 0; corner < group.length; corner += 1) {
-      const destination = group[corner];
-      positions[destination] = translatedX;
-      positions[destination + 1] = translatedY;
-      positions[destination + 2] = translatedZ;
-    }
+    positions[offset] = translatedX;
+    positions[offset + 1] = translatedY;
+    positions[offset + 2] = translatedZ;
   }
+  copyRepeatedVertices(positions, controller.footTranslationCopies);
   state.localDeformationDelta.x += x;
   state.localDeformationDelta.y += y;
   state.localDeformationDelta.z += z;
@@ -597,8 +650,9 @@ function writeFootPlantNormals(
   if (dx === 0 && dy === 0 && dz === 0) {
     return;
   }
-  for (const group of controller.footNormalGroups) {
-    const offset = group[0];
+  const offsets = controller.footNormalOffsets;
+  for (let index = 0; index < offsets.length; index += 1) {
+    const offset = offsets[index];
     const slope = slopes[offset / 3];
     const nx = normals[offset];
     const nz = normals[offset + 2];
@@ -619,13 +673,11 @@ function writeFootPlantNormals(
     const normalX = nx / magnitude;
     const normalY = ny / magnitude;
     const normalZ = nz / magnitude;
-    for (let corner = 0; corner < group.length; corner += 1) {
-      const destination = group[corner];
-      normals[destination] = normalX;
-      normals[destination + 1] = normalY;
-      normals[destination + 2] = normalZ;
-    }
+    normals[offset] = normalX;
+    normals[offset + 1] = normalY;
+    normals[offset + 2] = normalZ;
   }
+  copyRepeatedVertices(normals, controller.footNormalCopies);
   controller.normalAttribute.needsUpdate = true;
 }
 
@@ -786,7 +838,14 @@ export function createCharacterLimbDeformationController(
   const operations = metadata.segments.map((range) =>
     operationFromRange(metadata, range, bindPositions, bindNormals),
   );
-  const vertexGroups = operations.flatMap((operation) => operation.vertexGroups);
+  const footTranslation = selectInfluencedVertices(
+    operations,
+    footPlantInfluences.weights,
+  );
+  const footNormals = selectInfluencedVertices(
+    operations,
+    footPlantInfluences.slopes,
+  );
   const controller: CharacterLimbDeformationController = {
     mesh,
     geometry,
@@ -800,12 +859,10 @@ export function createCharacterLimbDeformationController(
     positionAttribute,
     normalAttribute,
     operations,
-    footTranslationGroups: vertexGroups.filter(
-      (group) => footPlantInfluences.weights[group[0] / 3] !== 0,
-    ),
-    footNormalGroups: vertexGroups.filter(
-      (group) => footPlantInfluences.slopes[group[0] / 3] !== 0,
-    ),
+    footTranslationOffsets: footTranslation.offsets,
+    footTranslationCopies: footTranslation.copies,
+    footNormalOffsets: footNormals.offsets,
+    footNormalCopies: footNormals.copies,
     write: undefined as unknown as (
       angles?: CharacterLimbDeformationAngles,
     ) => void,
