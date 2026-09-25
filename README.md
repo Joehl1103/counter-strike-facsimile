@@ -9,3 +9,7 @@ The coordinator updates clean stale PR branches, requires current CI and
 independent review, merges validated PRs, and tags @Joehl1103 for unresolved work.
 The independent reviewer uses a trusted local relay so valid Ollama Cloud keys
 can authenticate without becoming visible to PR code or the Codex subprocess.
+
+Reviewers receive exact PR diffs in bounded chunks plus nested HEAD-file context.
+A trusted aggregate gate requires every chunk report to pass for the same head
+and base; exclusions and overflow are documented in MERGE_COORDINATOR.md.

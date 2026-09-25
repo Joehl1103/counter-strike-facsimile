@@ -133,16 +133,87 @@ Sources: [TypeSafe API](https://docs.typesafe.ai/api),
 
 ## Review provider
 
-The pinned Codex Action runs an independent read-only session using Ollama
+The pinned Codex Action runs independent read-only chunk sessions using Ollama
 Cloud's `gpt-oss:120b` through `https://ollama.com/v1/responses`. Its input is
-named `openai-api-key` by the Action, but receives `OLLAMA_CLOUD_API` from the
-main-only `codex-review` environment. It does not use desktop authentication
+named `openai-api-key` by the Action. The trusted relay holds `OLLAMA_CLOUD_API`
+from the main-only `codex-review` environment; the Action's proxy receives only
+a local placeholder. It does not use desktop authentication
 or download a model on the runner.
 
-Cloud does not support structured-output requests. The reviewer is prompted
-for JSON and the separate trusted-base gate parses and validates it strictly;
-malformed, stale, incomplete or adverse reports fail. This is still a Codex
-CLI review; TypeSafe Jev only classifies bounded retry/human-handoff cases.
+The `pull_request_target` workflow checks out the event's immutable base SHA in
+the planning, reviewer and gate jobs. Workflow, planner, prompt template, proxy/relay and validator come from
+that trusted checkout. **Reviewer workflow/script changes take effect only after
+they reach main**; the PR proposing them is still reviewed by the old workflow.
+Forks are refused. Candidate code is never checked out at the workspace root,
+executed or installed in a key-bearing job. Drop-sudo, the read-only permission
+profile and disabled web search remain in force.
+
+[review-plan.mjs](.github/scripts/review-plan.mjs) reads git objects, starting with
+`git diff --numstat -z --find-renames BASE...HEAD`. It embeds the exact
+`git diff --no-color --find-renames BASE...HEAD` text for each assigned file/part
+in a generated `prompt-file`, inside explicit untrusted-data delimiters. Full
+copies of changed reviewable HEAD text files (up to 2 MiB each) go only under
+`.codex-review-input/head/`. HEAD `AGENTS.md`, `.codex/` and symlink blobs are
+inert data there; symlinks are written as ordinary files. Missing large context
+copies are listed, while their complete diff still gets chunked. Other changed
+files' copies are available for cross-file context, but each reviewer reports
+only on its assigned chunk. Unchanged callers are not copied; insufficient
+context must be reported as a limitation or an incomplete review.
+
+Planning orders workflow/CI changes, source, tests, scripts/config, then docs/data.
+Chunks default to **60,000 diff characters**, with a **40-chunk cap** and up to
+**four concurrent reviewers**. Large file diffs split at hunk boundaries, then
+line ranges for oversized hunks (character fragments for an oversized single
+line); labels identify file, part and HEAD lines. Split parts concatenate to the
+original diff. `REVIEW_CHUNK_BUDGET` and `REVIEW_MAX_CHUNKS` can tune these limits;
+set them identically in all jobs if configuring the workflow. A digest mismatch
+fails closed. The manifest records base/head, files/parts, skipped files, lock
+summaries, context availability, uncovered parts and a SHA-256 digest. Every
+matrix leg and the gate regenerate that same manifest from git objects. Overflow
+skips model calls and produces `complete:false`, listing uncovered parts; it never
+silently drops code or publishes a passing status.
+
+Lockfiles are reviewed as summary items, never embedded or copied raw. For
+`package-lock.json` and `npm-shrinkwrap.json`, the trusted planner compares base
+and HEAD `packages` maps and lists added/removed/changed entries, versions,
+resolved hosts and changed field names. Invalid JSON or an unsupported missing
+`packages` map fails planning. `yarn.lock` and `pnpm-lock.yaml` receive changed-line
+counts and an explicit summarized-format limitation. These summaries do not
+substitute for a dependency audit or reproduce integrity values/full URLs.
+
+Binary files, assets (including models and fonts; SVG remains reviewable text)
+and generated files (`dist/`, `build/`, `coverage/`, `*.min.js`, `*.map`) are listed
+with reasons, byte sizes and line counts, not reviewed. Deleted text files include
+their deletion diff when fewer than 200 lines; larger deletions are listed as
+`deleted-large`. A zero-chunk PR may pass **only** when every changed file is a
+binary/asset exclusion, with an explicit summary naming those files. Locks must
+always produce review items; large-deletion-only, generated-only and empty PRs
+do not auto-pass. A passing mixed PR still excludes its listed skipped files;
+this status is not asset/provenance or game acceptance.
+
+Cloud does not support structured-output requests. Each reviewer returns JSON
+with exact head, base and chunk ID, completeness, verdict, summary, findings and
+limitations. Reports use seven-day `codex-review-<chunk id>` artifacts.
+[review-gate.mjs](.github/scripts/review-gate.mjs), on a fresh runner without model
+secrets, requires a successful plan and reviewer matrix, no overflow, exactly one
+report per planned chunk and no extra IDs. Each report must pass the existing
+base `validateReview` plus chunk identity: complete, pass, no findings, summary
+and limitations. Missing, duplicated, malformed, adverse or stale reports fail.
+The reports and skipped/uncovered lists are HTML-escaped in the run summary.
+
+The gate retains the unchanged-head/base recheck and publishes the same single
+commit status: context `Independent Codex review`, success description exactly
+`Reviewed <head> against <base>`. The coordinator depends on this format.
+
+Runner-minute planning estimate (not a measured provider benchmark): with 3–8
+minutes per chunk including setup, 10 chunks use roughly 30–80 runner minutes
+plus planning/gate overhead; 40 use roughly 120–320. Four-way parallelism reduces
+elapsed time, not total minutes. The 20-minute reviewer timeout permits up to
+800 reviewer minutes at the cap, before overhead; retries consume more. Against
+the private Free repository's supplied 2,000-minute monthly budget, split very
+large PRs and inspect overflow before rerunning. Provider latency, review quality
+and live Actions execution remain unverified by offline tests. This remains a
+Codex CLI review; TypeSafe Jev only classifies retry/human-handoff cases.
 
 Provider contract checked 2026-09-17: [Ollama OpenAI compatibility](https://docs.ollama.com/api/openai-compatibility),
 [Codex integration](https://docs.ollama.com/integrations/codex), and
