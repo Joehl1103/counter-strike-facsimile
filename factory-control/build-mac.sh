@@ -7,6 +7,7 @@ contents_directory="$app_directory/Contents"
 resources_directory="$contents_directory/Resources"
 backend_directory="$resources_directory/backend"
 swift_compiler="$(xcrun --find swiftc)"
+clang_compiler="$(xcrun --find clang)"
 macos_sdk_path="$(xcrun --sdk macosx --show-sdk-path)"
 module_cache_directory="${TMPDIR:-/tmp}/factory-control-swift-module-cache"
 
@@ -28,6 +29,19 @@ done
 
 mkdir -p "$resources_directory" "$backend_directory" "$contents_directory/MacOS" "$module_cache_directory"
 cp "$script_directory/mac/Info.plist" "$contents_directory/Info.plist"
+
+"$clang_compiler" \
+    -std=c11 \
+    -O2 \
+    -Wall \
+    -Wextra \
+    -Werror \
+    -target arm64-apple-macosx14.0 \
+    -isysroot "$macos_sdk_path" \
+    "$script_directory/mac/FactoryLock.c" \
+    -o "$contents_directory/MacOS/Factory Backend"
+
+codesign --force --sign - "$contents_directory/MacOS/Factory Backend"
 
 "$swift_compiler" \
     -swift-version 5 \

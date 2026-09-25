@@ -60,6 +60,18 @@ a switch On is authorization only for that project's saved instruction, subject
 to its existing boundaries. The app does not bypass Codex sandboxing or project
 review gates. Workers cannot start nested agents through Codex's multi-agent feature.
 
+The native launcher holds an operating-system lock through the dispatcher's lifetime;
+crashes release it without deleting or reclaiming a PID file. Before a worker starts,
+its owned paths are checked in the actual workspace. Symlinked paths, including
+dangling links and links inside an owned directory, are rejected; choose direct,
+narrow file paths. Codex's sandbox remains a separate write boundary.
+
+The bundled output schemas guide the model's response format; they are not an
+authorization boundary. The engine validates the returned task independently,
+and the runner validates terminal outcomes. Bundled code and schemas share the
+same signed-app trust boundary. State-save errors deliberately stop dispatch:
+continuing without a durable reservation could duplicate a task after restart.
+
 ## Development checks
 
 ```sh

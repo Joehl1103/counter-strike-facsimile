@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { closeSync, existsSync, openSync } from "node:fs";
 import path from "node:path";
-import { codexArguments, prepareWorkspace, readJSON, runtimeEnvironment, workerPrompt, writeJSON } from "./runtime.mjs";
+import { codexArguments, prepareWorkspace, readJSON, runtimeEnvironment, validateOwnedPaths, workerPrompt, writeJSON } from "./runtime.mjs";
 
 const jobDirectory = process.argv[2];
 
@@ -17,6 +17,7 @@ async function runJob() {
   }
   const request = readJSON(path.join(jobDirectory, "request.json"));
   const workspace = prepareWorkspace(request.project, request.task, jobDirectory);
+  validateOwnedPaths(workspace, request.task.ownedFiles);
   const output = path.join(jobDirectory, "outcome.json");
   const events = openSync(path.join(jobDirectory, "events.jsonl"), "a", 0o600);
   const errors = openSync(path.join(jobDirectory, "stderr.log"), "a", 0o600);

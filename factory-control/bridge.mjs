@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, openSync, closeSync, realpathSync, statSync, unlinkSync } from "node:fs";
+import { existsSync, fstatSync, mkdirSync, realpathSync, statSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -222,36 +222,23 @@ export class FactoryHost {
   }
 }
 
-// Separate app instances must never run a second dispatcher against the same registry.
-function acquireLock(directory) {
-  mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const lockPath = path.join(directory, "dispatcher.lock");
-  if (existsSync(lockPath)) {
-    const lock = readJSON(lockPath);
-    let alive = true;
-    try {
-      process.kill(lock.pid, 0);
-    } catch {
-      alive = false;
-    }
-    if (alive) {
-      throw new Error("Factory Control is already running. Use its existing menu-bar icon.");
-    }
-    unlinkSync(lockPath);
+// The native launcher holds flock across exec. Kernel process exit releases it;
+// stale lock files are never deleted or used as a PID-based ownership decision.
+function requireNativeLock(directory) {
+  const descriptor = Number(process.env.FACTORY_LOCK_FD);
+  if (!Number.isSafeInteger(descriptor) || descriptor < 3) {
+    throw new Error("Start Factory Control through its native app so dispatch has an exclusive process lock.");
   }
-  const descriptor = openSync(lockPath, "wx", 0o600);
-  closeSync(descriptor);
-  writeJSON(lockPath, { pid: process.pid });
-  return () => {
-    if (existsSync(lockPath) && readJSON(lockPath).pid === process.pid) {
-      unlinkSync(lockPath);
-    }
-  };
+  const opened = fstatSync(descriptor);
+  const expected = statSync(path.join(directory, "dispatcher.lock"));
+  if (!opened.isFile() || opened.ino !== expected.ino || opened.dev !== expected.dev) {
+    throw new Error("The factory dispatcher does not hold its expected native lock file.");
+  }
 }
 
 function startBridge() {
   const directory = process.env.FACTORY_STATE_DIRECTORY ?? defaultDirectory;
-  const release = acquireLock(directory);
+  requireNativeLock(directory);
   const emit = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
   const host = new FactoryHost({ stateDirectory: directory, emit });
   const input = createInterface({ input: process.stdin });
@@ -264,7 +251,6 @@ function startBridge() {
     stopping = true;
     clearInterval(timer);
     host.stop();
-    release();
     input.close();
     process.exitCode = 0;
   };
@@ -285,7 +271,6 @@ function startBridge() {
   input.on("close", shutdown);
   process.once("SIGTERM", shutdown);
   process.once("SIGINT", shutdown);
-  process.once("exit", release);
   host.publish();
 }
 

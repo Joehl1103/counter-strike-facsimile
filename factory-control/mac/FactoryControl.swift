@@ -55,10 +55,28 @@ private final class FactoryController: ObservableObject {
             return
         }
 
-        guard let nodePath = Self.findNode(),
+        guard let appExecutable = Bundle.main.executableURL,
               let bridgePath = Bundle.main.resourceURL?.appendingPathComponent("backend/bridge.mjs"),
+              let nodePath = Self.findNode() else {
+            errorMessage = "The factory backend or Node.js could not be located."
+            return
+        }
+
+        let helperPath = appExecutable.deletingLastPathComponent().appendingPathComponent("Factory Backend")
+        let stateDirectory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Factory Control", isDirectory: true)
+        let lockPath = stateDirectory.appendingPathComponent("dispatcher.lock").path
+
+        do {
+            try FileManager.default.createDirectory(at: stateDirectory, withIntermediateDirectories: true)
+        } catch {
+            errorMessage = "Could not prepare factory state storage: \(error.localizedDescription)"
+            return
+        }
+
+        guard FileManager.default.isExecutableFile(atPath: helperPath.path),
               FileManager.default.fileExists(atPath: bridgePath.path) else {
-            errorMessage = "Factory backend or Node.js was not found in this app."
+            errorMessage = "The bundled factory backend helper or bridge was not found."
             return
         }
 
@@ -66,8 +84,8 @@ private final class FactoryController: ObservableObject {
         let childInput = Pipe()
         let childOutput = Pipe()
         let childError = Pipe()
-        childProcess.executableURL = URL(fileURLWithPath: nodePath)
-        childProcess.arguments = [bridgePath.path]
+        childProcess.executableURL = helperPath
+        childProcess.arguments = [lockPath, nodePath, bridgePath.path]
         childProcess.standardInput = childInput
         childProcess.standardOutput = childOutput
         childProcess.standardError = childError
@@ -244,7 +262,7 @@ private final class FactoryController: ObservableObject {
         outputPipe = nil
         pendingMethods.removeAll()
         pendingProjectIds.removeAll()
-        errorMessage = "The factory backend stopped (exit \(exitCode)). The app will not report changes as successful."
+        errorMessage = errorMessage ?? "The factory backend stopped (exit \(exitCode)). The app will not report changes as successful."
         if shuttingDown {
             quitCompletion?()
             quitCompletion = nil

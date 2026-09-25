@@ -376,6 +376,8 @@ export class FactoryEngine {
   }
 
   persistOrFailClosed() {
+    // Durable reservations are required for duplicate prevention after a crash.
+    // An unwritable registry must stop new dispatch, not degrade to untracked work.
     try {
       this.save(this.snapshot());
       return true;

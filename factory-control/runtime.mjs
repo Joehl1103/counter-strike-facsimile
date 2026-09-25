@@ -1,8 +1,8 @@
 import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
-  closeSync, existsSync, mkdirSync, openSync, readFileSync,
-  readdirSync, renameSync, writeFileSync,
+  closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync,
+  readdirSync, realpathSync, renameSync, writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -109,6 +109,57 @@ PR/review workflow when authorized; do not mark issues Done unless explicitly pe
 Before ending post project/issue evidence where the project's standing instructions require.
 Use outcome=blocked for missing checks, access or unresolved findings. A complete worker
 outcome describes this assignment only; it does not establish final product acceptance.`;
+}
+
+// Refuse symlinked ownership before any worker starts; never follow it outside a project.
+export function validateOwnedPaths(workspace, ownedFiles) {
+  const root = realpathSync(workspace);
+  let inspectedEntries = 0;
+  const inspect = (candidate) => {
+    inspectedEntries += 1;
+    if (inspectedEntries > 10000) {
+      throw new Error("Task ownership is too broad. Select narrower files before dispatch.");
+    }
+    let entry;
+    try {
+      entry = lstatSync(candidate);
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        return;
+      }
+      throw error;
+    }
+    if (entry.isSymbolicLink()) {
+      throw new Error("Task ownership includes a symbolic link. Select direct project files before dispatch.");
+    }
+    if (entry.isDirectory()) {
+      for (const child of readdirSync(candidate)) {
+        inspect(path.join(candidate, child));
+      }
+    }
+  };
+
+  for (const ownedFile of ownedFiles) {
+    const target = path.resolve(root, ownedFile);
+    const relative = path.relative(root, target);
+    if (relative.startsWith(`..${path.sep}`) || relative === ".." || path.isAbsolute(relative) || /[?*\[\]]/.test(ownedFile)) {
+      throw new Error("Task ownership must use literal paths inside the selected project.");
+    }
+    let ancestor = path.dirname(target);
+    while (ancestor !== root && ancestor.startsWith(`${root}${path.sep}`)) {
+      try {
+        if (lstatSync(ancestor).isSymbolicLink()) {
+          throw new Error("Task ownership follows a symbolic link outside its direct project path.");
+        }
+      } catch (error) {
+        if (error.code !== "ENOENT") {
+          throw error;
+        }
+      }
+      ancestor = path.dirname(ancestor);
+    }
+    inspect(target);
+  }
 }
 
 export class CodexRuntime {

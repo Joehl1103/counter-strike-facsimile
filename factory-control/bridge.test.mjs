@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { FactoryHost } from "./bridge.mjs";
-import { CodexRuntime, codexArguments, prepareWorkspace, readJSON, writeJSON } from "./runtime.mjs";
+import { CodexRuntime, codexArguments, prepareWorkspace, readJSON, validateOwnedPaths, writeJSON } from "./runtime.mjs";
 import { spawnSync } from "node:child_process";
 
 function fixture(context) {
@@ -173,4 +173,19 @@ test("runner never starts Codex without a durable handoff marker", (context) => 
   const receipt = readJSON(path.join(job, "result.json"));
   assert.equal(receipt.status, "failed");
   assert.match(receipt.message, /No Codex task started/);
+});
+
+test("ownership rejects external, dangling and nested symlinks before worker start", (context) => {
+  const { root, directory } = fixture(context);
+  const outside = path.join(directory, "outside");
+  mkdirSync(outside);
+  symlinkSync(outside, path.join(root, "external"));
+  assert.throws(() => validateOwnedPaths(root, ["external/new.txt"]), /symbolic link/);
+  symlinkSync(path.join(directory, "missing"), path.join(root, "dangling"));
+  assert.throws(() => validateOwnedPaths(root, ["dangling"]), /symbolic link/);
+  const source = path.join(root, "source");
+  mkdirSync(source);
+  symlinkSync(outside, path.join(source, "nested"));
+  assert.throws(() => validateOwnedPaths(root, ["source"]), /symbolic link/);
+  assert.doesNotThrow(() => validateOwnedPaths(root, ["new/future.txt"]));
 });
