@@ -39,7 +39,7 @@ async function runJob() {
     }
     let status = "completed";
     if (result.outcome === "blocked") {
-      status = "failed";
+      status = "blocked";
     }
     writeJSON(path.join(jobDirectory, "result.json"), { status, message: result.message.slice(0, 4000), finishedAt: new Date().toISOString() });
   } finally {

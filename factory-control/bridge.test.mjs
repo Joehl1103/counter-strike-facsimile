@@ -85,6 +85,19 @@ test("Off workers finish and active projects cannot be removed", async (context)
   assert.equal(host.snapshot().projects.length, 0);
 });
 
+test("blocked worker outcomes remain distinguishable from process failures", async (context) => {
+  const { host, root, receipts, launches } = fixture(context);
+  const id = host.add(root, "Finish the documented task");
+  host.requireProject(id).engine.setEnabled(true);
+  await host.pump();
+  host.toggle(id, false);
+  receipts.set(id, [{ ...launches[0], status: "blocked", message: "Waiting for required access" }]);
+  host.reconcile();
+  const run = host.snapshot().projects[0].runs[0];
+  assert.equal(run.status, "blocked");
+  assert.equal(run.message, "Waiting for required access");
+});
+
 test("global worker capacity is two, even across many projects", async (context) => {
   const { host, directory, launches } = fixture(context);
   for (let index = 0; index < 3; index += 1) {

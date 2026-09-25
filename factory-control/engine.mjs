@@ -177,7 +177,7 @@ export class FactoryEngine {
   }
 
   finishRun(id, result) {
-    const allowedStatuses = new Set(["completed", "failed", "interrupted"]);
+    const allowedStatuses = new Set(["completed", "blocked", "failed", "interrupted"]);
     if (typeof id !== "string" || !allowedStatuses.has(result?.status)) {
       throw new TypeError("finishRun requires a run ID and a terminal status.");
     }
