@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { coordinate } from './merge-coordinator.mjs';
+import { runAutoMerge } from './auto-merge.mjs';
 
 const repository = 'Joehl1103/counter-strike-facsimile';
 const head = 'a'.repeat(40);
@@ -454,3 +455,78 @@ test('the mode passed to merge is resolved immediately before the merge', async 
     assert.deepEqual(github.mergeOptions, { rulesMode: finalMode });
   }
 });
+
+for (const refuseNotice of [false, true]) {
+  test(`a completed merge against unreviewed main stops the tick with notice ${refuseNotice ? 'blocked' : 'posted on the closed PR'}`, async () => {
+    const candidate = snapshot(1);
+    const github = planLimitedGithub(candidate);
+    const mergeCommit = 'c'.repeat(40);
+    let merged = false;
+    github.listPulls = async () => [candidate.pr, snapshot(2).pr];
+    github.snapshot = async (number) => {
+      assert.equal(number, 1, 'The tick must stop before inspecting another candidate');
+      if (merged) {
+        return snapshot(1, { pr: { state: 'closed', merged: true, merge_commit_sha: mergeCommit }, baseSha: mergeCommit });
+      }
+      return structuredClone(candidate);
+    };
+    const originalRules = github.effectiveRules;
+    github.effectiveRules = async () => {
+      if (merged && refuseNotice) {
+        github.calls.push(['effectiveRules']);
+        throw Object.assign(new Error('Rules access denied'), { status: 403 });
+      }
+      return originalRules();
+    };
+    github.merge = async (pr, expectedHead, expectedBase, { rulesMode }) => runAutoMerge({
+      expected: { repository, number: pr.number, head: expectedHead, base: expectedBase },
+      rulesMode, allowQueue: false,
+      runGh: async (args) => {
+        if (args[0] === 'pr') {
+          assert.equal(merged, false, 'Only one merge may be attempted');
+          merged = true;
+          return { stdout: '' };
+        }
+        if (args[1].endsWith('/rules/branches/main')) {
+          throw Object.assign(new Error('gh command failed'), {
+            stdout: JSON.stringify({ message: 'Upgrade to GitHub Pro or make this repository public to enable this feature.', status: '403' }),
+            stderr: 'gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)\n',
+          });
+        }
+        if (args[1].endsWith('/branches/main')) {
+          return { stdout: JSON.stringify({ commit: { sha: base } }) };
+        }
+        if (args[1].includes('/git/commits/')) {
+          return { stdout: JSON.stringify({ sha: mergeCommit, parents: [{ sha: 'd'.repeat(40) }] }) };
+        }
+        assert.ok(args[1].endsWith('/pulls/1'));
+        const currentPr = { ...pr, state: merged ? 'closed' : 'open', merged, merge_commit_sha: mergeCommit };
+        return { stdout: JSON.stringify(currentPr) };
+      },
+    });
+    const originalComment = github.comment;
+    github.comment = async (number, body) => {
+      assert.equal(merged, true, 'The notice must be posted after the PR closed');
+      return originalComment(number, body);
+    };
+
+    const result = await coordinate({ github, repository });
+
+    assert.equal(merged, true);
+    assert.deepEqual(result.results, [{ number: 1, outcome: 'merged_unverified_base',
+      reasonCode: 'merged_against_unreviewed_base', mergeCommit,
+      noticeOutcome: refuseNotice ? 'blocked' : 'needs_human',
+    }]);
+    const comments = github.calls.filter((call) => call[0] === 'comment');
+    assert.equal(comments.length, refuseNotice ? 0 : 1);
+    if (!refuseNotice) {
+      assert.equal(comments[0][1], 1);
+      assert.match(comments[0][2], /@Joehl1103/);
+      assert.match(comments[0][2], /Reason: merged_against_unreviewed_base/);
+      assert.ok(comments[0][2].includes('This PR was merged while main changed after validation (possible concurrent direct push). Inspect main at the merge commit and rerun CI there.'));
+      assert.ok(comments[0][2].includes(mergeCommit));
+      const commentIndex = github.calls.indexOf(comments[0]);
+      assert.equal(github.calls[commentIndex - 1][0], 'effectiveRules');
+    }
+  });
+}

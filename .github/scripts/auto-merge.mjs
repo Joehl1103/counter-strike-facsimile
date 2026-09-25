@@ -13,13 +13,22 @@ const REQUIRED_CHECKS = [
 const GITHUB_ACTIONS_INTEGRATION_ID = 15368;
 export const PLAN_LIMIT_MESSAGE = 'Upgrade to GitHub Pro or make this repository public to enable this feature.';
 
-// REST errors carry a sanitized flag; gh reports the status and message in text.
+// REST errors carry a sanitized flag; gh must provide matching JSON and stderr.
 export function isPlanLimitedRulesError(error) {
   if (error?.status !== undefined) {
     return error.status === 403 && error.planLimited === true;
   }
-  return [error?.stderr, error?.message].some((message) =>
-    typeof message === 'string' && message.includes(PLAN_LIMIT_MESSAGE) && message.includes('HTTP 403'));
+  const expectedStderr = `gh: ${PLAN_LIMIT_MESSAGE} (HTTP 403)`;
+  if (typeof error?.stdout !== 'string' || typeof error?.stderr !== 'string' ||
+      error.stderr.trim() !== expectedStderr) {
+    return false;
+  }
+  try {
+    const body = JSON.parse(error.stdout);
+    return body?.message === PLAN_LIMIT_MESSAGE && String(body.status) === '403';
+  } catch {
+    return false;
+  }
 }
 
 // Only the known plan limitation or confirmed private empty rules can fall back.
@@ -119,10 +128,6 @@ export async function runAutoMerge({ expected, runGh, allowQueue = true, rulesMo
   });
   if (currentRulesMode === 'self_enforced') {
     assert.equal(rulesMode, 'self_enforced', 'Plan-limited rules require coordinator self-enforcement.');
-    const main = parseJson(await runGh([
-      'api', `repos/${expected.repository}/branches/main`,
-    ]), 'Live main lookup');
-    assert.equal(main.commit?.sha, expected.base, 'Live main changed from the reviewed base.');
   }
 
   if (pullRequest.auto_merge && allowQueue) {
@@ -131,6 +136,13 @@ export async function runAutoMerge({ expected, runGh, allowQueue = true, rulesMo
     return { outcome: 'armed', message: 'Native GitHub squash auto-merge is already armed.' };
   }
 
+  // Keep this the last lookup before the merge; GitHub cannot match the base atomically.
+  if (currentRulesMode === 'self_enforced') {
+    const main = parseJson(await runGh([
+      'api', `repos/${expected.repository}/branches/main`,
+    ]), 'Live main lookup');
+    assert.equal(main.commit?.sha, expected.base, 'Live main changed from the reviewed base.');
+  }
   await runGh([
     'pr', 'merge', String(expected.number), '--repo', expected.repository,
     ...(allowQueue ? ['--auto'] : []), '--squash', '--match-head-commit', expected.head,
@@ -149,6 +161,12 @@ export async function runAutoMerge({ expected, runGh, allowQueue = true, rulesMo
     ]), 'Merge commit lookup');
     assert.equal(mergeCommit.sha, mergeCommitSha, 'GitHub returned a different merge commit.');
     assert.equal(mergeCommit.parents?.length, 1, 'The merged result must be a squash commit.');
+    if (currentRulesMode === 'self_enforced' && mergeCommit.parents[0].sha !== expected.base) {
+      const error = new Error('The completed merge used a different base from the independent review.');
+      error.code = 'merged_against_unreviewed_base';
+      error.mergeCommit = mergeCommitSha;
+      throw error;
+    }
     assert.equal(mergeCommit.parents[0].sha, expected.base,
       'The completed merge used a different base from the independent review.');
     return { outcome: 'merged', mergeCommit: mergeCommitSha,

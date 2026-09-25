@@ -74,7 +74,7 @@ enforcement point.
 
 In `self_enforced` mode, the coordinator's checks are the only enforcement.
 The merge helper rechecks rules (validating strictly if available), verifies live
-main still equals the reviewed base, then uses direct
+main still equals the reviewed base as its last lookup immediately before direct
 `gh pr merge --squash --match-head-commit` with the expected head, never `--auto`.
 It requires a completed merge, unchanged head, and a single-parent squash commit
 whose parent equals the reviewed base. It never uses an administrator bypass.
@@ -82,8 +82,14 @@ whose parent equals the reviewed base. It never uses an administrator bypass.
 Private Free repositories do not block direct pushes, force pushes, deletion of
 main, or human merges that skip checks. Environment deployment-branch restrictions
 may also be unenforced on this plan. A concurrent main change between the final
-lookup and merge cannot be blocked by this fallback; parent verification detects
-it afterward. Upgrading to Pro or making the repository public restores native
+lookup and merge cannot be blocked by this fallback. Exploiting that residual
+window requires someone who can already push directly to main, which this plan
+does not block. Parent verification detects it and escalates with a
+`merged_against_unreviewed_base` notice mentioning @Joehl1103 on the closed PR.
+The tick stops with `merged_unverified_base` and the merge commit; if rules
+validation or comment delivery refuses the notice, `noticeOutcome: blocked`
+retains that failure in the result. Inspect the merge commit and rerun CI there.
+Upgrading to Pro or making the repository public restores native
 rules and strict `github_rules` mode automatically when effective rules return;
 missing or weakened rules still refuse.
 

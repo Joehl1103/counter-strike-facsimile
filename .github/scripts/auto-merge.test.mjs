@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { runAutoMerge, validateEffectiveRules } from './auto-merge.mjs';
+import { isPlanLimitedRulesError, runAutoMerge, validateEffectiveRules } from './auto-merge.mjs';
+import { coordinate } from './merge-coordinator.mjs';
 
 const expected = {
   repository: 'Joehl1103/counter-strike-facsimile', number: 119,
@@ -187,23 +188,71 @@ test('coordinator immediate mode never arms a queued merge',async()=>{
 
 const upgradeMessage = 'Upgrade to GitHub Pro or make this repository public to enable this feature.';
 const planLimitedError = Object.assign(new Error('gh command failed'), {
-  stderr: `gh: ${upgradeMessage} (HTTP 403)`,
+  code: 1,
+  stdout: JSON.stringify({ message: upgradeMessage,
+    documentation_url: 'https://docs.github.com/rest/repos/rules#get-rules-for-a-branch', status: '403' }),
+  stderr: `gh: ${upgradeMessage} (HTTP 403)\n`,
 });
 const mergedPullRequest = {
   ...qualifyingPullRequest, state: 'closed', merged: true, merge_commit_sha: 'c'.repeat(40),
 };
 
 test('self-enforced plan fallback checks live main then immediately squash merges the exact head', async () => {
-  for (const rulesError of [planLimitedError, new Error(`gh: ${upgradeMessage} (HTTP 403)`)]) {
-    const runner = createGhRunner({ rulesError, postMerge: mergedPullRequest });
-    const result = await runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' });
+  const runner = createGhRunner({ rulesError: planLimitedError, postMerge: mergedPullRequest });
+  const result = await runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' });
 
-    assert.equal(result.outcome, 'merged');
-    assert.deepEqual(runner.calls.slice(2, 4), [
-      ['api', `repos/${expected.repository}/branches/main`],
-      ['pr', 'merge', '119', '--repo', expected.repository, '--squash', '--match-head-commit', expected.head],
-    ]);
+  assert.equal(result.outcome, 'merged');
+  assert.deepEqual(runner.calls.slice(2, 4), [
+    ['api', `repos/${expected.repository}/branches/main`],
+    ['pr', 'merge', '119', '--repo', expected.repository, '--squash', '--match-head-commit', expected.head],
+  ]);
+});
+
+test('only the structured real gh plan-limit response authorizes fallback', async () => {
+  assert.equal(isPlanLimitedRulesError(planLimitedError), true);
+  assert.equal(isPlanLimitedRulesError({ status: 403, planLimited: true }), true);
+  assert.equal(isPlanLimitedRulesError({ status: 500, planLimited: true }), false);
+
+  const ambiguousDiagnostics = [
+    { stderr: `${planLimitedError.stderr}Extra content\n` },
+    { stderr: `gh: HTTP 500 after an earlier error: ${planLimitedError.stderr}` },
+    { stdout: 'not JSON' },
+    { stdout: JSON.stringify({ message: upgradeMessage, status: '500' }) },
+    { stdout: JSON.stringify({ message: 'Permission denied', status: '403' }) },
+    { stdout: undefined, stderr: undefined, message: `gh: ${upgradeMessage} (HTTP 403)` },
+  ];
+  for (const diagnostic of ambiguousDiagnostics) {
+    const rulesError = Object.assign(new Error('gh command failed'), {
+      stdout: planLimitedError.stdout, stderr: planLimitedError.stderr, ...diagnostic,
+    });
+    assert.equal(isPlanLimitedRulesError(rulesError), false);
+
+    const runner = createGhRunner({ rulesError, postMerge: mergedPullRequest });
+    await assert.rejects(runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' }));
+    assert.equal(runner.calls.some((call) => call[0] === 'pr'), false);
+
+    const github = {
+      actor: 'github-actions[bot]',
+      effectiveRules: async () => { throw rulesError; },
+    };
+    for (const method of ['listPulls', 'snapshot', 'update', 'merge', 'rerun', 'comments', 'comment']) {
+      github[method] = async () => assert.fail(`Unexpected call: ${method}`);
+    }
+    await assert.rejects(coordinate({ github, repository: expected.repository }), (error) => error === rulesError);
   }
+});
+
+test('a self-enforced merge against an unreviewed parent identifies the completed merge for escalation', async () => {
+  const runner = createGhRunner({ rulesError: planLimitedError, postMerge: mergedPullRequest,
+    mergeCommit: { sha: 'c'.repeat(40), parents: [{ sha: 'd'.repeat(40) }] },
+  });
+  await assert.rejects(runAutoMerge({ expected, runGh: runner.runGh, allowQueue: false, rulesMode: 'self_enforced' }), (error) => {
+    assert.equal(error.code, 'merged_against_unreviewed_base');
+    assert.equal(error.mergeCommit, 'c'.repeat(40));
+    return true;
+  });
+  const mergeIndex = runner.calls.findIndex((call) => call[0] === 'pr');
+  assert.deepEqual(runner.calls[mergeIndex - 1], ['api', `repos/${expected.repository}/branches/main`]);
 });
 
 test('self-enforced fallback refuses a different live main without merging', async () => {

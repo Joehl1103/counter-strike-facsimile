@@ -142,9 +142,10 @@ const humanReasons = {
   review_or_checks_not_current: 'Obtain all required checks and independent review for this exact head and current main.',
   snapshot_unavailable: 'The coordinator could not read complete PR evidence. Inspect repository/API permissions and workflow access.',
   merge_refused: 'GitHub refused the validated merge. Inspect live branch rules, required approvals and automation permissions.',
+  merged_against_unreviewed_base: 'This PR was merged while main changed after validation (possible concurrent direct push). Inspect main at the merge commit and rerun CI there.',
 };
 
-async function leaveHumanNotice({ github, snapshot, repository, owner, reasonCode, runId, validateRules }) {
+async function leaveHumanNotice({ github, snapshot, repository, owner, reasonCode, runId, mergeCommit, validateRules }) {
   const identity = candidateIdentity(snapshot);
   const marker = markerFor('human', { ...identity, reasonCode });
   const comments = await github.comments(snapshot.pr.number);
@@ -155,9 +156,10 @@ async function leaveHumanNotice({ github, snapshot, repository, owner, reasonCod
   await validateRules();
   const runUrl = safeRunUrl(repository, runId);
   const details = runUrl ? `\nCI run: ${runUrl}` : '';
+  const mergeDetails = SHA.test(mergeCommit ?? '') ? `\nMerge commit: ${mergeCommit}` : '';
   await github.comment(snapshot.pr.number,
     `@${owner}\n<!-- ${marker} -->\n${humanReasons[reasonCode] ?? 'Inspect this candidate before continuing.'}\nReason: ${reasonCode}.\n` +
-    `Candidate: head ${identity.head}, base ${identity.base}.${details}`);
+    `Candidate: head ${identity.head}, base ${identity.base}.${details}${mergeDetails}`);
   return { outcome: 'needs_human', reasonCode };
 }
 
@@ -362,7 +364,22 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
         { rulesMode: mergeRulesMode });
       results.push({ number, outcome: merged.outcome, mergeCommit: merged.mergeCommit });
       return { rulesMode, results };
-    } catch {
+    } catch (error) {
+      if (error?.code === 'merged_against_unreviewed_base') {
+        // The merge already happened. Notify using its reviewed identity even
+        // though the PR is closed, and never hide the outcome if the notice fails.
+        let noticeOutcome;
+        try {
+          const notice = await notifyHuman({ github, snapshot, repository, owner,
+            reasonCode: error.code, mergeCommit: error.mergeCommit });
+          noticeOutcome = notice.outcome;
+        } catch {
+          noticeOutcome = 'blocked';
+        }
+        results.push({ number, outcome: 'merged_unverified_base', reasonCode: error.code,
+          mergeCommit: error.mergeCommit, noticeOutcome });
+        return { rulesMode, results };
+      }
       const after = await github.snapshot(number);
       if (validIdentity(after) && sameIdentity(snapshot, after) && after.pr.state === 'open' && !after.pr.draft) {
         await notifyHuman({ github, snapshot: after, repository, owner, reasonCode: 'merge_refused' });

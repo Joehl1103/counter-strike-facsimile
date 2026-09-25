@@ -98,7 +98,10 @@ test('adapter passes self-enforced mode to the immediate merge helper', async ()
   const github = createGitHub({ repository: 'a/b', runGh: async (args) => {
     calls.push(args);
     if (args[1] === 'repos/a/b/rules/branches/main') {
-      throw new Error(`gh: ${upgradeMessage} (HTTP 403)`);
+      throw Object.assign(new Error('gh command failed'), {
+        stdout: JSON.stringify({ message: upgradeMessage, status: '403' }),
+        stderr: `gh: ${upgradeMessage} (HTTP 403)\n`,
+      });
     }
     if (args[1] === 'repos/a/b/pulls/171') {
       pullLookups += 1;
