@@ -83,12 +83,12 @@ No issue is automatically closed and no hosting deployment is included.
 
 ## Activation and verification
 
-This bootstrap excludes game code, raw assets, private history and local archives.
-Apply [.github/main-ruleset.json](.github/main-ruleset.json) after initial main is
-created. Permit squash merges only, prevent main deletion/force pushes, require
-PRs and all three checks without bypass actors. Enable repository auto-merge;
-keep automatic branch deletion disabled. Initial publication and end-to-end
-verification must be recorded separately from local fixture results.
+The 22-file workflow-only bootstrap was published on 2026-09-17 as remote main
+`2d5ff1e26a0922bfc8218899c27fdc4d7e757598`. It excludes game source, original
+history, raw assets and the retained archive. Strict ruleset 23595815 is active;
+initial CI and empty-queue coordinator startup passed. Those runs do not
+establish PR review, update or merge behavior. The reviewer environment now
+has its main-only Ollama credential; the repository duplicate was removed. See the current [activation record](AUTO_MERGE_SETUP.md).
 
 Configure the two main-only environments and their credentials. Verify with
 approved linked PRs: clean stale update starts fresh CI/review; failed/missing

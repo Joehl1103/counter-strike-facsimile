@@ -1,0 +1,3430 @@
+{
+  "sourceRevision": "94b2f4ef79c9c97c4d17eca04427a0b7947e8108",
+  "sourceRepository": ".local-archive/counter-strike",
+  "files": [
+    {
+      "path": ".gitignore",
+      "sha256": "152b966c859fdd02bdb911a427ab491af791b9fb0110135f855f12b4e7c8cd23",
+      "bytes": 1254,
+      "mode": 436,
+      "decision": "reconcile",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c48fc0c5c9e7f313eafffc01490dc31e60549182bd4b535e9093e94ac2b72d4b"
+    },
+    {
+      "path": ".openai/hosting.json",
+      "sha256": "7ff7370c296e3c365ab89e2ec71bc6e4f2068a7f9b27a91dadac040720474852",
+      "bytes": 91,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7ff7370c296e3c365ab89e2ec71bc6e4f2068a7f9b27a91dadac040720474852"
+    },
+    {
+      "path": ".oxfmtrc.json",
+      "sha256": "0962fdddb1840a06b5afb918ff3f2ff56bce346082651ec5c3567c01dd809f17",
+      "bytes": 260,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "0962fdddb1840a06b5afb918ff3f2ff56bce346082651ec5c3567c01dd809f17"
+    },
+    {
+      "path": ".oxlintrc.json",
+      "sha256": "1a7aa1c7d83b05939e4e697eed9316224caea8958c4ad12837f8be740c13a47d",
+      "bytes": 1370,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1a7aa1c7d83b05939e4e697eed9316224caea8958c4ad12837f8be740c13a47d"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "5a68242fed55a43e5b879651f32209e91f71beef00316e5f799c55ac3c528a85",
+      "bytes": 3904,
+      "mode": 436,
+      "decision": "reconcile",
+      "sourceGitMode": "100644",
+      "candidateSha256": "52d90cc81c3ea46ab9b91202a5260904253d542ad7d4352e1ba6ef148d8da3a9"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "f9419de920c4b2f67be31f10b0dae2fd881a852afdf1bf29345bb10ebc79ec9c",
+      "bytes": 186,
+      "mode": 436,
+      "decision": "reconcile",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5253485d6f98f1e3c57437c5d284f6af7a6e88a2d95e8aa5285a552e7a1df526"
+    },
+    {
+      "path": "CODEX_PLAN.md",
+      "sha256": "cbd412a995f6289ea24f5aa595447e0567856636cee7975d3e5ddb03f75313d6",
+      "bytes": 45514,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "cbd412a995f6289ea24f5aa595447e0567856636cee7975d3e5ddb03f75313d6"
+    },
+    {
+      "path": "CODEX_PLAN_CLASSIC_HANDS_ROUND_2.md",
+      "sha256": "cbf3e4e10cd7448097f44b88df4e99e099d90d60298428ad981c16aa5fe382ed",
+      "bytes": 17206,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "cbf3e4e10cd7448097f44b88df4e99e099d90d60298428ad981c16aa5fe382ed"
+    },
+    {
+      "path": "CODEX_PLAN_CS16_FACSIMILE.md",
+      "sha256": "650b6b492d22700cfe88296c3cc9c97bb2a9fb976b81a1106fcd5747422208e9",
+      "bytes": 157606,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "650b6b492d22700cfe88296c3cc9c97bb2a9fb976b81a1106fcd5747422208e9"
+    },
+    {
+      "path": "CODEX_PLAN_FPS_HANDS.md",
+      "sha256": "9074d5cf0eae4687993e253b3b026051d7cf76879413a7898f3fd9a20b707023",
+      "bytes": 4212,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9074d5cf0eae4687993e253b3b026051d7cf76879413a7898f3fd9a20b707023"
+    },
+    {
+      "path": "CODEX_PLAN_GLOCK_REFERENCE.md",
+      "sha256": "57526fbb5068c86cafa7529f648171883312d079fadaf31931cb6a9b1f14bd49",
+      "bytes": 5194,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "57526fbb5068c86cafa7529f648171883312d079fadaf31931cb6a9b1f14bd49"
+    },
+    {
+      "path": "CODEX_PLAN_GRAPHICS_ANATOMY.md",
+      "sha256": "accc8fa855c6920729527f0ec7f1b02cf6a2f5f86275acdbdf5d440ed7dd77b5",
+      "bytes": 21416,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "accc8fa855c6920729527f0ec7f1b02cf6a2f5f86275acdbdf5d440ed7dd77b5"
+    },
+    {
+      "path": "CODEX_PLAN_GRAPHICS_REALISM.md",
+      "sha256": "f8ea0e912db7cd9f5eb6bc90350900db9d454708188bfcf1b37399b542576f8e",
+      "bytes": 14799,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f8ea0e912db7cd9f5eb6bc90350900db9d454708188bfcf1b37399b542576f8e"
+    },
+    {
+      "path": "CODEX_PLAN_GRAPHICS_REFINEMENT.md",
+      "sha256": "9a393e3e064b67ad34668345f7e8ba339f970a428c978fe3d7f06676cea0e50d",
+      "bytes": 2840,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9a393e3e064b67ad34668345f7e8ba339f970a428c978fe3d7f06676cea0e50d"
+    },
+    {
+      "path": "CODEX_PLAN_GRAPHICS_REPAIR.md",
+      "sha256": "68c967d83a55df708f6e4c67f9aa6839ecd2daccf47717fd38195fbd37ac4e30",
+      "bytes": 2110,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "68c967d83a55df708f6e4c67f9aa6839ecd2daccf47717fd38195fbd37ac4e30"
+    },
+    {
+      "path": "CODEX_PLAN_LINEAR_EXECUTION.md",
+      "sha256": "e36a8a57ac57c43e268f610997d1ced21d50d916442142e1fd8451ce6d2b5cd9",
+      "bytes": 5362,
+      "mode": 436,
+      "decision": "retain historical body; add current-authority preamble",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e4aa26951c7a2db806ca5f040761b9467d01ee0e3648d50cc0cb5a7d4b2e24f2"
+    },
+    {
+      "path": "CODEX_PLAN_LINEAR_PRODUCT.md",
+      "sha256": "64a38134be5d928d8ebc75a8e5205114aad8e0e1fcc28c4250404e70360dbdcc",
+      "bytes": 50283,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "64a38134be5d928d8ebc75a8e5205114aad8e0e1fcc28c4250404e70360dbdcc"
+    },
+    {
+      "path": "CODEX_PLAN_SKIP_BOT_WAIT.md",
+      "sha256": "674fe7fdd5e66a0f3e75b4a3bdc97e25993c297a3ad7e885a1adfe28c882f508",
+      "bytes": 702,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "674fe7fdd5e66a0f3e75b4a3bdc97e25993c297a3ad7e885a1adfe28c882f508"
+    },
+    {
+      "path": "CODEX_PLAN_TOOL_REUSE.md",
+      "sha256": "b7581193ec19bbe3bb7df2833a0a304cca17e2974c0b720a46b26241ef132ac3",
+      "bytes": 103007,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b7581193ec19bbe3bb7df2833a0a304cca17e2974c0b720a46b26241ef132ac3"
+    },
+    {
+      "path": "CODEX_PLAN_VISUAL_RECOVERY.md",
+      "sha256": "0f256bc1fab48a3c726cccdf297bac82bdb8949a88a9f18c7864c87a4d480c00",
+      "bytes": 15191,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "0f256bc1fab48a3c726cccdf297bac82bdb8949a88a9f18c7864c87a4d480c00"
+    },
+    {
+      "path": "CODEX_PLAN_VISUAL_TOOLKIT.md",
+      "sha256": "3ba3b093ff912d99cffb7feb5046371e6b8be55853d4e8a39914b854ef6af718",
+      "bytes": 5345,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "3ba3b093ff912d99cffb7feb5046371e6b8be55853d4e8a39914b854ef6af718"
+    },
+    {
+      "path": "CS16_REFERENCE.md",
+      "sha256": "7a3d5e968dfeed6cf13b2070e332b829883ab62f6962681c86642ce0eb5cbccb",
+      "bytes": 26557,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7a3d5e968dfeed6cf13b2070e332b829883ab62f6962681c86642ce0eb5cbccb"
+    },
+    {
+      "path": "FACTORY_METHOD.md",
+      "sha256": "7ef105f7c31429c903908a1cf4df96fe95664947a74a662d48dc1ff7295e695a",
+      "bytes": 18921,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7ef105f7c31429c903908a1cf4df96fe95664947a74a662d48dc1ff7295e695a"
+    },
+    {
+      "path": "HANDOFF_CS16.md",
+      "sha256": "a0f60509a82b89787d1ffb72dbf0e4c5f26fa5e2a92bb5908b2674f57d686d38",
+      "bytes": 24175,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a0f60509a82b89787d1ffb72dbf0e4c5f26fa5e2a92bb5908b2674f57d686d38"
+    },
+    {
+      "path": "PROJECT_MEMORY.md",
+      "sha256": "e73c319ab1a5d3d1000a2edddfc3b1c9772fe73d640521764987d1e2e83b1199",
+      "bytes": 7411,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e73c319ab1a5d3d1000a2edddfc3b1c9772fe73d640521764987d1e2e83b1199"
+    },
+    {
+      "path": "QA_PROTOCOL.md",
+      "sha256": "74c5ff40b435dcb77819532f9a106e03f62235b0faa6d1bd4f083d27f415238f",
+      "bytes": 13241,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "74c5ff40b435dcb77819532f9a106e03f62235b0faa6d1bd4f083d27f415238f"
+    },
+    {
+      "path": "README.md",
+      "sha256": "579d3b9a249e1ada5c34303e2f402d8155937f273684978c2ba4f74b8ca6fdd1",
+      "bytes": 5147,
+      "mode": 436,
+      "decision": "reconcile",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4ebd57cbd4530aad8edf9551ec31ac95823ee9dd0d8a4d4dfc92fd07d6019873"
+    },
+    {
+      "path": "app/actual-round-start.ts",
+      "sha256": "e00177499305ce87f7fcc6500bdeeec8f893ccc296790fa07df971a969e2ed53",
+      "bytes": 435,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e00177499305ce87f7fcc6500bdeeec8f893ccc296790fa07df971a969e2ed53"
+    },
+    {
+      "path": "app/authored-carbine-viewmodel.ts",
+      "sha256": "8fb68ff11b7c7ab3f6bf5f70a5dcc0ffe1cee512818ecdef106f981044b9c184",
+      "bytes": 8896,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8fb68ff11b7c7ab3f6bf5f70a5dcc0ffe1cee512818ecdef106f981044b9c184"
+    },
+    {
+      "path": "app/authored-pistol-viewmodel.ts",
+      "sha256": "414c476c69feaa87cc6486c28ab5412662a1dc5dc5468a9f3be9b61efa14b5a4",
+      "bytes": 3064,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "414c476c69feaa87cc6486c28ab5412662a1dc5dc5468a9f3be9b61efa14b5a4"
+    },
+    {
+      "path": "app/authored-rifle-viewmodel.ts",
+      "sha256": "bf43681b00de36ee7e73348243259697e0f0863382f1f7cc1d028985c939c4d8",
+      "bytes": 2798,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bf43681b00de36ee7e73348243259697e0f0863382f1f7cc1d028985c939c4d8"
+    },
+    {
+      "path": "app/bot-animation.ts",
+      "sha256": "93425f661bc8bd18d7094cae4895d7a6ac903784ea32825e919d1301a776a47c",
+      "bytes": 21602,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "93425f661bc8bd18d7094cae4895d7a6ac903784ea32825e919d1301a776a47c"
+    },
+    {
+      "path": "app/bot-economy.ts",
+      "sha256": "20a048456e1a5a7c14b25c32c51571bb7f448c88d8530449d4574537e7eb3fa3",
+      "bytes": 4159,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "20a048456e1a5a7c14b25c32c51571bb7f448c88d8530449d4574537e7eb3fa3"
+    },
+    {
+      "path": "app/bot-hearing.ts",
+      "sha256": "05fcd827df244d63b22dcb459688c864b6907c64dd481c96830df4fe63cc28ec",
+      "bytes": 3409,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "05fcd827df244d63b22dcb459688c864b6907c64dd481c96830df4fe63cc28ec"
+    },
+    {
+      "path": "app/bot-locomotion.ts",
+      "sha256": "796ca6e6019bf56eda956729a95575e668e28c48d5a2af9b5c23eadb1987d4f7",
+      "bytes": 7191,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "796ca6e6019bf56eda956729a95575e668e28c48d5a2af9b5c23eadb1987d4f7"
+    },
+    {
+      "path": "app/bot-objective-intel.ts",
+      "sha256": "364f6b2797447b5c71f5071da6576dd8c0b019059cb15b8ed00638e9111574c6",
+      "bytes": 6134,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "364f6b2797447b5c71f5071da6576dd8c0b019059cb15b8ed00638e9111574c6"
+    },
+    {
+      "path": "app/bot-perception.ts",
+      "sha256": "7aa8dcf708422b908e56652f04a99039f304511a0e7e076d9489f7dd96500483",
+      "bytes": 876,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7aa8dcf708422b908e56652f04a99039f304511a0e7e076d9489f7dd96500483"
+    },
+    {
+      "path": "app/bot-shot-resolution.ts",
+      "sha256": "dd5e4d749c6c4f92c3ab577b03ca500895079c6ec5e985fc39e5252ae5be9a13",
+      "bytes": 5296,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "dd5e4d749c6c4f92c3ab577b03ca500895079c6ec5e985fc39e5252ae5be9a13"
+    },
+    {
+      "path": "app/bot-utility.ts",
+      "sha256": "888b47a45eb390e421f0d0b90b73d135ae3049e33b9cc9108a1a701100bc55c0",
+      "bytes": 5129,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "888b47a45eb390e421f0d0b90b73d135ae3049e33b9cc9108a1a701100bc55c0"
+    },
+    {
+      "path": "app/bot-weapon-actions.ts",
+      "sha256": "295ade54ebda88bce6f98be35d9b7067880522c1c17d66b7ed6a18d48eeb7a3d",
+      "bytes": 5354,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "295ade54ebda88bce6f98be35d9b7067880522c1c17d66b7ed6a18d48eeb7a3d"
+    },
+    {
+      "path": "app/casing-effects.ts",
+      "sha256": "b645e4ffbd96295ac8e87b62c19eb7b2461537fd3eed44b387fee4a2f5237417",
+      "bytes": 3661,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b645e4ffbd96295ac8e87b62c19eb7b2461537fd3eed44b387fee4a2f5237417"
+    },
+    {
+      "path": "app/character-limb-deformation.ts",
+      "sha256": "48520cc221dfea37b860faebbc2e15099016e34bd93ef912ed3d5eadf81a72d6",
+      "bytes": 26382,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "48520cc221dfea37b860faebbc2e15099016e34bd93ef912ed3d5eadf81a72d6"
+    },
+    {
+      "path": "app/character-motion.ts",
+      "sha256": "9f3e10658afa140f25a37c16c44f6a8f0d99d33ef2d590f3992a7cf34d069b7a",
+      "bytes": 1956,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9f3e10658afa140f25a37c16c44f6a8f0d99d33ef2d590f3992a7cf34d069b7a"
+    },
+    {
+      "path": "app/character-rig.ts",
+      "sha256": "fe977ce28b2abdee2a4143c0ca2d99d1b510bd24fea0cbeeebfa327bac905554",
+      "bytes": 34156,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fe977ce28b2abdee2a4143c0ca2d99d1b510bd24fea0cbeeebfa327bac905554"
+    },
+    {
+      "path": "app/character-visuals.ts",
+      "sha256": "6f90048acbffbdb7c1e68243c795edc5b8d8131a5ac256cf042ca7eb4af22128",
+      "bytes": 30239,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6f90048acbffbdb7c1e68243c795edc5b8d8131a5ac256cf042ca7eb4af22128"
+    },
+    {
+      "path": "app/classic-character-mesh.ts",
+      "sha256": "05fd228e34071d56b53658bd3a365b8c28e51f0b281f0d82d38211a551984d59",
+      "bytes": 18449,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "05fd228e34071d56b53658bd3a365b8c28e51f0b281f0d82d38211a551984d59"
+    },
+    {
+      "path": "app/classic-hud.ts",
+      "sha256": "266a2204937e4121d04df6ac12c2c04dc1879c7a2f63efa51189c1fb874c00ce",
+      "bytes": 1081,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "266a2204937e4121d04df6ac12c2c04dc1879c7a2f63efa51189c1fb874c00ce"
+    },
+    {
+      "path": "app/classic-interaction-audio.ts",
+      "sha256": "62465204a5cf8153b392cb3a95f8515a4ef3d7ec14716860f93199973de69311",
+      "bytes": 6566,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "62465204a5cf8153b392cb3a95f8515a4ef3d7ec14716860f93199973de69311"
+    },
+    {
+      "path": "app/classic-surface-profile.ts",
+      "sha256": "72c36e4e31b559a94d1781c2a004e34d3fd4cf1a80f4ab6b8c0acab091496543",
+      "bytes": 34694,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "72c36e4e31b559a94d1781c2a004e34d3fd4cf1a80f4ab6b8c0acab091496543"
+    },
+    {
+      "path": "app/classic-usp-audio.ts",
+      "sha256": "69fe5cee32f605acc480d9388bdaf251a74678bf1eac6dc4e9fce7c95bbfbcf4",
+      "bytes": 2505,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "69fe5cee32f605acc480d9388bdaf251a74678bf1eac6dc4e9fce7c95bbfbcf4"
+    },
+    {
+      "path": "app/combat-damage.ts",
+      "sha256": "6b0f9425643c418df5e8cfaa1f63e07e12ef09bc58b318b0e63745a68fd0fc03",
+      "bytes": 553,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6b0f9425643c418df5e8cfaa1f63e07e12ef09bc58b318b0e63745a68fd0fc03"
+    },
+    {
+      "path": "app/combat-feedback.ts",
+      "sha256": "88421f8a811f9b9b69b6a95d21f4645480ace7a8c9ff04d0ee8b44a2b6464a4b",
+      "bytes": 3074,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "88421f8a811f9b9b69b6a95d21f4645480ace7a8c9ff04d0ee8b44a2b6464a4b"
+    },
+    {
+      "path": "app/combat-visual-effects.ts",
+      "sha256": "9bfcacdf160646fe5e5f7e288cfdcb8d2f6567664153c54a3c0ec05b6dc2116b",
+      "bytes": 5626,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9bfcacdf160646fe5e5f7e288cfdcb8d2f6567664153c54a3c0ec05b6dc2116b"
+    },
+    {
+      "path": "app/death-poses.ts",
+      "sha256": "1e9fd773691cf1f4cf5a3c60b9806f48d05c240fea75a524b69dabbef1361e32",
+      "bytes": 4952,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1e9fd773691cf1f4cf5a3c60b9806f48d05c240fea75a524b69dabbef1361e32"
+    },
+    {
+      "path": "app/desert-props.ts",
+      "sha256": "79fac15962c70541dc6c80e70e3e8cd599b3a12faba8d227cd0eafd74daa3759",
+      "bytes": 11671,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "79fac15962c70541dc6c80e70e3e8cd599b3a12faba8d227cd0eafd74daa3759"
+    },
+    {
+      "path": "app/dust2-architecture.ts",
+      "sha256": "b8317b25ad0651892ae15e061f87b7d9dc7679522c068b848b5bc9479ee254d7",
+      "bytes": 11635,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b8317b25ad0651892ae15e061f87b7d9dc7679522c068b848b5bc9479ee254d7"
+    },
+    {
+      "path": "app/dust2-map.ts",
+      "sha256": "4e4859096bccc5374a0f8a6a7ffda1c96c68e1d34de176a7fc742f4e8041f7b4",
+      "bytes": 11973,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4e4859096bccc5374a0f8a6a7ffda1c96c68e1d34de176a7fc742f4e8041f7b4"
+    },
+    {
+      "path": "app/environment-materials.ts",
+      "sha256": "890b734f1218ae0568fbd25e27e4ac74d1f2a66ea52c4210f9819864bb1d7cfb",
+      "bytes": 7202,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "890b734f1218ae0568fbd25e27e4ac74d1f2a66ea52c4210f9819864bb1d7cfb"
+    },
+    {
+      "path": "app/equipment-viewmodel-visuals.ts",
+      "sha256": "7804c29ef3dd5ae67427034aa80449d48a6e354efd9795d2d1c6588c6cd03248",
+      "bytes": 8654,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7804c29ef3dd5ae67427034aa80449d48a6e354efd9795d2d1c6588c6cd03248"
+    },
+    {
+      "path": "app/fixed-movement-clock.ts",
+      "sha256": "32ce7f746162c4583b8472b377693282dc6528a52cc7d81690096c3a794c150d",
+      "bytes": 995,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "32ce7f746162c4583b8472b377693282dc6528a52cc7d81690096c3a794c150d"
+    },
+    {
+      "path": "app/game-rules.ts",
+      "sha256": "7867c2ac1013754794157e3d32e15b9b4969ddb52505155e5f4ae86634de7e7b",
+      "bytes": 96014,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7867c2ac1013754794157e3d32e15b9b4969ddb52505155e5f4ae86634de7e7b"
+    },
+    {
+      "path": "app/globals.css",
+      "sha256": "79389bccdfe975413787884915badb66919e14df3bd3a94edaf468581d6d4cce",
+      "bytes": 31321,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "79389bccdfe975413787884915badb66919e14df3bd3a94edaf468581d6d4cce"
+    },
+    {
+      "path": "app/graphics-budget.ts",
+      "sha256": "ddca33eeee7b7ed67e986a372f84ffec5eef5c8cea4eedd2a74ea0380b5baf70",
+      "bytes": 9579,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ddca33eeee7b7ed67e986a372f84ffec5eef5c8cea4eedd2a74ea0380b5baf70"
+    },
+    {
+      "path": "app/graphics-qa.ts",
+      "sha256": "0459ee83a5200f5ce16287a12878b2c7552f4a09e0fa5e28056abc3fb9702079",
+      "bytes": 15286,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "0459ee83a5200f5ce16287a12878b2c7552f4a09e0fa5e28056abc3fb9702079"
+    },
+    {
+      "path": "app/grenade-effects.ts",
+      "sha256": "913cc9d6ef235ead3a0083b75595594440b5748ec3df30e6385b86fa6c919986",
+      "bytes": 1872,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "913cc9d6ef235ead3a0083b75595594440b5748ec3df30e6385b86fa6c919986"
+    },
+    {
+      "path": "app/keyboard-playtest-input.ts",
+      "sha256": "3d1f84a9df81fb2cc513fc6c410b690ec4ba8ad19021c9d2c34d1e24765b5154",
+      "bytes": 2529,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "3d1f84a9df81fb2cc513fc6c410b690ec4ba8ad19021c9d2c34d1e24765b5154"
+    },
+    {
+      "path": "app/layout.tsx",
+      "sha256": "bc38cf6582e98476778a6fe1d5a35905e2514d146f8ed18c7acd54ae4df51050",
+      "bytes": 974,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bc38cf6582e98476778a6fe1d5a35905e2514d146f8ed18c7acd54ae4df51050"
+    },
+    {
+      "path": "app/local-playtest.ts",
+      "sha256": "835c867a3652445efe0944b547cd03534928e53acb8869165437d1d9a63a76e4",
+      "bytes": 2447,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "835c867a3652445efe0944b547cd03534928e53acb8869165437d1d9a63a76e4"
+    },
+    {
+      "path": "app/match-lifecycle-qa.ts",
+      "sha256": "f06af21491ba65d8b5662714ddd7465405a755b174f8fad2785a33b1d1420f21",
+      "bytes": 9357,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f06af21491ba65d8b5662714ddd7465405a755b174f8fad2785a33b1d1420f21"
+    },
+    {
+      "path": "app/movement-presentation-invariants.ts",
+      "sha256": "7a1edb9fc7eb90cd26eacd6a222bdad720eb4b4be525505f90671cfa5e4f6ba9",
+      "bytes": 8302,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7a1edb9fc7eb90cd26eacd6a222bdad720eb4b4be525505f90671cfa5e4f6ba9"
+    },
+    {
+      "path": "app/objective-audio.ts",
+      "sha256": "7969b8b807194ebcd6dd910ee1c2447b1d3648587f5b1758cd12618d95ba9962",
+      "bytes": 2001,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7969b8b807194ebcd6dd910ee1c2447b1d3648587f5b1758cd12618d95ba9962"
+    },
+    {
+      "path": "app/opponent-reload-audio.ts",
+      "sha256": "6c4f90fe4d1f3d18dcf332fdf6ec84755c5b5ddb17c6762d56c1ed12df2e2274",
+      "bytes": 700,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6c4f90fe4d1f3d18dcf332fdf6ec84755c5b5ddb17c6762d56c1ed12df2e2274"
+    },
+    {
+      "path": "app/page.tsx",
+      "sha256": "fce09826c95d92db0c42309ca9dae47fe53f63153f1bf23a6937aae501c15dc3",
+      "bytes": 489251,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fce09826c95d92db0c42309ca9dae47fe53f63153f1bf23a6937aae501c15dc3"
+    },
+    {
+      "path": "app/perimeter-masonry-detail.ts",
+      "sha256": "8c7bd0226e32b1d4429d4dad606ef2ac25056f327c13372db95fa3d03900c716",
+      "bytes": 2660,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8c7bd0226e32b1d4429d4dad606ef2ac25056f327c13372db95fa3d03900c716"
+    },
+    {
+      "path": "app/player-collision.ts",
+      "sha256": "ec79569344d0a2c07116ecc7bf7bc47fad17399279bdf699725f179a7220c13c",
+      "bytes": 8043,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ec79569344d0a2c07116ecc7bf7bc47fad17399279bdf699725f179a7220c13c"
+    },
+    {
+      "path": "app/player-death-camera.ts",
+      "sha256": "b51d608752bf944b96526d6a99eee1c2f23c5cff023bf24e68931c5ead07201a",
+      "bytes": 2178,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b51d608752bf944b96526d6a99eee1c2f23c5cff023bf24e68931c5ead07201a"
+    },
+    {
+      "path": "app/player-input.ts",
+      "sha256": "027988e6ed0be03529051243d69563445eeb33fe091949b246229de90b88b53a",
+      "bytes": 1577,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "027988e6ed0be03529051243d69563445eeb33fe091949b246229de90b88b53a"
+    },
+    {
+      "path": "app/player-locomotion.ts",
+      "sha256": "5699341b8bae157eee3dcd4896e0239b4274e889b4b24eda5418d6279c009b8e",
+      "bytes": 8984,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5699341b8bae157eee3dcd4896e0239b4274e889b4b24eda5418d6279c009b8e"
+    },
+    {
+      "path": "app/player-physics.ts",
+      "sha256": "6e003a75401527cd972df839c1bdf9e63c042b7b5a2f29d95936107f727e0f7e",
+      "bytes": 3619,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6e003a75401527cd972df839c1bdf9e63c042b7b5a2f29d95936107f727e0f7e"
+    },
+    {
+      "path": "app/player-presentation.ts",
+      "sha256": "7ad75dcb06086a81886ad1fdbdfa7bc1dfa64ac7ae6bc93b83be8f40379f7d83",
+      "bytes": 15106,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7ad75dcb06086a81886ad1fdbdfa7bc1dfa64ac7ae6bc93b83be8f40379f7d83"
+    },
+    {
+      "path": "app/primary-weapon-models.ts",
+      "sha256": "67e053eeed0f00af4ea64cf4fac136e6bcd88e82299c01fb5f128d0a129ddd91",
+      "bytes": 30309,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "67e053eeed0f00af4ea64cf4fac136e6bcd88e82299c01fb5f128d0a129ddd91"
+    },
+    {
+      "path": "app/render-quality.ts",
+      "sha256": "4e51da2850149edebe2df6067e428b53a02ae91d07e15b5b463c5b18a8879277",
+      "bytes": 2862,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4e51da2850149edebe2df6067e428b53a02ae91d07e15b5b463c5b18a8879277"
+    },
+    {
+      "path": "app/scene-layout.ts",
+      "sha256": "6aab7055985d62b901d7ac911accf5e2fa92d0be16e15b021d53c5b4be5baae2",
+      "bytes": 3393,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6aab7055985d62b901d7ac911accf5e2fa92d0be16e15b021d53c5b4be5baae2"
+    },
+    {
+      "path": "app/secondary-weapon-models.ts",
+      "sha256": "9a2fef24b9617b17c92ba33b20c26edef988d03c53b9cbbe9d349fbe1399d3f2",
+      "bytes": 30781,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9a2fef24b9617b17c92ba33b20c26edef988d03c53b9cbbe9d349fbe1399d3f2"
+    },
+    {
+      "path": "app/simulation-clock.ts",
+      "sha256": "ab504c7bb1b9489715231ddbbc6cd466b881ab1a66af7fb78fafca157992c039",
+      "bytes": 1990,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ab504c7bb1b9489715231ddbbc6cd466b881ab1a66af7fb78fafca157992c039"
+    },
+    {
+      "path": "app/skinned-character-visuals.ts",
+      "sha256": "e1cf77b4a1e8b797040f9cc3040633599cf2fdb2d682afb10bda273b4cfdb5d7",
+      "bytes": 38602,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e1cf77b4a1e8b797040f9cc3040633599cf2fdb2d682afb10bda273b4cfdb5d7"
+    },
+    {
+      "path": "app/skip-bot-round.ts",
+      "sha256": "7cd7baeebb27d6c24e5bd4427bc59db0db479bae7597cc63e76f91b58f3b7ecc",
+      "bytes": 483,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7cd7baeebb27d6c24e5bd4427bc59db0db479bae7597cc63e76f91b58f3b7ecc"
+    },
+    {
+      "path": "app/spectator-camera.ts",
+      "sha256": "916c66517eb3294726107eca467c4a3109aa5c6ce485483221919a2ca2fc3586",
+      "bytes": 6483,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "916c66517eb3294726107eca467c4a3109aa5c6ce485483221919a2ca2fc3586"
+    },
+    {
+      "path": "app/static-visual-batching.ts",
+      "sha256": "7d7f9f8a2cd52aae26cd867a708c0fae81364ce39371c4e00eaa22aecdf2ad5d",
+      "bytes": 5207,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7d7f9f8a2cd52aae26cd867a708c0fae81364ce39371c4e00eaa22aecdf2ad5d"
+    },
+    {
+      "path": "app/surface-marks.ts",
+      "sha256": "533deef6082cc18cde8ed13b63565748df0cb7aa39f73426756721368946b0cd",
+      "bytes": 2355,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "533deef6082cc18cde8ed13b63565748df0cb7aa39f73426756721368946b0cd"
+    },
+    {
+      "path": "app/travel-surface-detail.ts",
+      "sha256": "77007aaadcc2f6879baecac18fce5173214d814e7adca655469cf9613e923644",
+      "bytes": 5567,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "77007aaadcc2f6879baecac18fce5173214d814e7adca655469cf9613e923644"
+    },
+    {
+      "path": "app/viewmodel-reload-visuals.ts",
+      "sha256": "85f6962da93d9add66d1f6feb6fa2701c092a39f614cf6bddd142348546be4d2",
+      "bytes": 3252,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "85f6962da93d9add66d1f6feb6fa2701c092a39f614cf6bddd142348546be4d2"
+    },
+    {
+      "path": "app/viewmodel-render-pass.ts",
+      "sha256": "2863712a8aa217c3e0892385ca1fb2b412dfd592f002b28313ea7f57998f4773",
+      "bytes": 2217,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "2863712a8aa217c3e0892385ca1fb2b412dfd592f002b28313ea7f57998f4773"
+    },
+    {
+      "path": "app/viewmodel-surface.ts",
+      "sha256": "0fefd6b6213d94cb7270e454f3986a5603e409925d70c59e017c42946185f534",
+      "bytes": 2682,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "0fefd6b6213d94cb7270e454f3986a5603e409925d70c59e017c42946185f534"
+    },
+    {
+      "path": "app/viewmodel-visuals.ts",
+      "sha256": "19daa8663d50fe47174ef22ca635f283ad394871eb70747fc7a366bdfacfe1ef",
+      "bytes": 47950,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "19daa8663d50fe47174ef22ca635f283ad394871eb70747fc7a366bdfacfe1ef"
+    },
+    {
+      "path": "app/visual-toolkit.ts",
+      "sha256": "41ee61c6348236737ac63c64e0444f0681eba66321406786ccac51f452a2ddec",
+      "bytes": 10841,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "41ee61c6348236737ac63c64e0444f0681eba66321406786ccac51f452a2ddec"
+    },
+    {
+      "path": "app/vite-virtual.d.ts",
+      "sha256": "61bf1e8329f6ea90612c44b79dc130df0e6335509821f6f361bb142a5f89654f",
+      "bytes": 175,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "61bf1e8329f6ea90612c44b79dc130df0e6335509821f6f361bb142a5f89654f"
+    },
+    {
+      "path": "app/weapon-ballistics.ts",
+      "sha256": "05ffe7644e3c1439493ed14a1c60d49a37fc8fce330c8a7b1040bc6a44a676b3",
+      "bytes": 7801,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "05ffe7644e3c1439493ed14a1c60d49a37fc8fce330c8a7b1040bc6a44a676b3"
+    },
+    {
+      "path": "app/weapon-penetration.ts",
+      "sha256": "91a1845e76715b92aff4bdc990159d1e5d99d70822d555f5744066e072325d28",
+      "bytes": 3323,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "91a1845e76715b92aff4bdc990159d1e5d99d70822d555f5744066e072325d28"
+    },
+    {
+      "path": "app/weapon-special-actions.ts",
+      "sha256": "8b041654aee0f2dff248522f6eb05cbfc24ac9df39b6b21b430e3f5d194ca06c",
+      "bytes": 5299,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8b041654aee0f2dff248522f6eb05cbfc24ac9df39b6b21b430e3f5d194ca06c"
+    },
+    {
+      "path": "app/weapon-surface-materials.ts",
+      "sha256": "d0a5b8ef4ff20a4c58917abd0e42b71b08b238502ae6f64702f81d2f70d0638b",
+      "bytes": 4195,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d0a5b8ef4ff20a4c58917abd0e42b71b08b238502ae6f64702f81d2f70d0638b"
+    },
+    {
+      "path": "app/weapon-surface-profile.ts",
+      "sha256": "de82a045da19a8792dc723637e36edd101a2d3f63b6ba6a3d82cda86ebc7aa5b",
+      "bytes": 4958,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "de82a045da19a8792dc723637e36edd101a2d3f63b6ba6a3d82cda86ebc7aa5b"
+    },
+    {
+      "path": "app/world-firearm-batching.ts",
+      "sha256": "bce5a64bdb7d44ffe1c105e64fb08ba3f750fe2bb5cbb5a7b1cd88b9a6ab541a",
+      "bytes": 5062,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bce5a64bdb7d44ffe1c105e64fb08ba3f750fe2bb5cbb5a7b1cd88b9a6ab541a"
+    },
+    {
+      "path": "assets/source/ASSET_WORKFLOW.md",
+      "sha256": "bb8cef0001b59e8e92a8a53fe5f548e00820657fc0427dfcf564b114bb15861f",
+      "bytes": 4897,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bb8cef0001b59e8e92a8a53fe5f548e00820657fc0427dfcf564b114bb15861f"
+    },
+    {
+      "path": "assets/source/characters/CT-PILOT-SOURCE.md",
+      "sha256": "77aa41d521771de999d1ca9d3d20fb2d667c6a8cb62ea116064c177ad5a8d4e2",
+      "bytes": 225,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "77aa41d521771de999d1ca9d3d20fb2d667c6a8cb62ea116064c177ad5a8d4e2"
+    },
+    {
+      "path": "assets/source/characters/ct-pilot-atlas.png",
+      "sha256": "af54f29469a02d9aa06506fb22940ca8cc267a3463a017872ec0b505c32f2778",
+      "bytes": 13635,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "af54f29469a02d9aa06506fb22940ca8cc267a3463a017872ec0b505c32f2778"
+    },
+    {
+      "path": "assets/source/characters/ct-pilot-authoring.py",
+      "sha256": "660ed3328db9f515e2c6b8827dc756029f37f60b46a0aa929147d1db5bd18e9f",
+      "bytes": 21785,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "660ed3328db9f515e2c6b8827dc756029f37f60b46a0aa929147d1db5bd18e9f"
+    },
+    {
+      "path": "assets/source/glock-reference/FROZEN_MANIFEST.json",
+      "sha256": "3aa1859140202f58e181f783250add2cfdc27b935cace49423f334d461c5cb9f",
+      "bytes": 2401,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "3aa1859140202f58e181f783250add2cfdc27b935cace49423f334d461c5cb9f"
+    },
+    {
+      "path": "assets/source/glock-reference/PROVENANCE.json",
+      "sha256": "6e5ad99979456fa6e9872f315ccf12bb83e51655567440ccd976af78ab939028",
+      "bytes": 2407,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6e5ad99979456fa6e9872f315ccf12bb83e51655567440ccd976af78ab939028"
+    },
+    {
+      "path": "assets/source/glock-reference/README.md",
+      "sha256": "1f13575ff5684170d8b1996598496131f21383b579299d21a1a4f7e29a7f0b8e",
+      "bytes": 5670,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1f13575ff5684170d8b1996598496131f21383b579299d21a1a4f7e29a7f0b8e"
+    },
+    {
+      "path": "assets/source/glock-reference/glock-rig-source.blend",
+      "sha256": "dcb33681eb8f9c09db27cd1a24ded032637d8264582ff2c9cd7ec6549f91a468",
+      "bytes": 3323458,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "dcb33681eb8f9c09db27cd1a24ded032637d8264582ff2c9cd7ec6549f91a468"
+    },
+    {
+      "path": "assets/source/glock-reference/license/Kuptchi-Readme.pdf",
+      "sha256": "6f2c1ff9d1d165aca37ff288a0447d7091126b98874a87f7c4dc5328b5c42907",
+      "bytes": 94311,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6f2c1ff9d1d165aca37ff288a0447d7091126b98874a87f7c4dc5328b5c42907"
+    },
+    {
+      "path": "assets/source/glock-reference/license/Kuptchi-readme-extracted.txt",
+      "sha256": "4ad60b01e1f59aa2f3b380b1cab59ca65ef06060b68143fd481a2e0a7f1e6b9c",
+      "bytes": 2070,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4ad60b01e1f59aa2f3b380b1cab59ca65ef06060b68143fd481a2e0a7f1e6b9c"
+    },
+    {
+      "path": "assets/source/glock-reference/raw-clips/Equip.glb",
+      "sha256": "d30306c0d28c1fe04b10d700713af32af51eb767a707c7149b858769049e865e",
+      "bytes": 593456,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d30306c0d28c1fe04b10d700713af32af51eb767a707c7149b858769049e865e"
+    },
+    {
+      "path": "assets/source/glock-reference/raw-clips/Fire.glb",
+      "sha256": "bd7133b8268cf525e9e9118f9ed63be4fd39aa1c0e5615fc44e909b5ddccd345",
+      "bytes": 592276,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bd7133b8268cf525e9e9118f9ed63be4fd39aa1c0e5615fc44e909b5ddccd345"
+    },
+    {
+      "path": "assets/source/glock-reference/raw-clips/Idle.glb",
+      "sha256": "becfd4a11a5535de2bd9a94127d7ab44ece1a3b5bc8d6ed4240873a462992057",
+      "bytes": 643748,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "becfd4a11a5535de2bd9a94127d7ab44ece1a3b5bc8d6ed4240873a462992057"
+    },
+    {
+      "path": "assets/source/glock-reference/raw-clips/Reload.glb",
+      "sha256": "36af21e6b35b0f9f869499f6bd87c7d3db81b606909b67cfd8df39505f25d66b",
+      "bytes": 612588,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "36af21e6b35b0f9f869499f6bd87c7d3db81b606909b67cfd8df39505f25d66b"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/FP_Arms/BlendFiles/FP_Arms.blend",
+      "sha256": "b9105ad836208b015444fe39cfa6060097190d39c504301b9f7c637acfcceac4",
+      "bytes": 1373816,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b9105ad836208b015444fe39cfa6060097190d39c504301b9f7c637acfcceac4"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/FP_Arms/BlendFiles/FP_Arms_Pistol_01_Anims.blend",
+      "sha256": "70da4a3654710b520c794a69ae079303ebba66139e541437df98730e52a3ebe9",
+      "bytes": 2961832,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "70da4a3654710b520c794a69ae079303ebba66139e541437df98730e52a3ebe9"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/FP_Arms/BlendFiles/FP_Arms_Rifle_01_Anims.blend",
+      "sha256": "2c31e7b35162c32f11f58969b6df4aea21c0603af9f73a8c0c4c2403104d93a2",
+      "bytes": 4447344,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "2c31e7b35162c32f11f58969b6df4aea21c0603af9f73a8c0c4c2403104d93a2"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/FP_Arms/BlendFiles/FP_Arms_SMG_01_Anims.blend",
+      "sha256": "609806091ca591b89d7238cd3de94978f0a6f32a96b23612f2eb41ca3df75365",
+      "bytes": 3274720,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "609806091ca591b89d7238cd3de94978f0a6f32a96b23612f2eb41ca3df75365"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/FP_Arms/BlendFiles/FP_Arms_Shotgun_01_Anims.blend",
+      "sha256": "7b931d8c000264c46a761852b88d98e6b4d3cadf27d08ef4ae9a74f8edd7e2aa",
+      "bytes": 3013824,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7b931d8c000264c46a761852b88d98e6b4d3cadf27d08ef4ae9a74f8edd7e2aa"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/FP_Arms/Texture/FPS_Arms_Albedo.png",
+      "sha256": "00812c909534f8b3aba5ad344011f8f1a5c2a8c3e3a50570ad453b3a6749d814",
+      "bytes": 11346,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "00812c909534f8b3aba5ad344011f8f1a5c2a8c3e3a50570ad453b3a6749d814"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/FX/Textures/LowRes_Noise.png",
+      "sha256": "723519d624ebcfc2dd703dd011fe34ee5d14b445a276db98370514c3e8bd01da",
+      "bytes": 5948,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "723519d624ebcfc2dd703dd011fe34ee5d14b445a276db98370514c3e8bd01da"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/FX/Textures/MuzzleFlash.png",
+      "sha256": "4ebc52191b9abd2406267031d6743afdb79cbaa7313c8f295a3968b82ea4b780",
+      "bytes": 1706,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4ebc52191b9abd2406267031d6743afdb79cbaa7313c8f295a3968b82ea4b780"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/AdditionalMeshes/Projectiles/BlendFile/Projectiles.blend",
+      "sha256": "ef21e43aa10b608727866e7e28a571c26b004d00da4d3170fcc269938bdbfc0c",
+      "bytes": 997800,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ef21e43aa10b608727866e7e28a571c26b004d00da4d3170fcc269938bdbfc0c"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/AdditionalMeshes/Projectiles/Texture/Projectiles_Albedo.png",
+      "sha256": "db0ed5bbbbd5571329882d8bbb94b667dd160f0911df0d6b4324aa760bfcd433",
+      "bytes": 43087,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "db0ed5bbbbd5571329882d8bbb94b667dd160f0911df0d6b4324aa760bfcd433"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Pistol_01/BlendFile/Pistol_01.blend",
+      "sha256": "557e550305423f38922a16a33a8e86df359f7b4123f08594d855bf8cba23524f",
+      "bytes": 1293348,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "557e550305423f38922a16a33a8e86df359f7b4123f08594d855bf8cba23524f"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Pistol_01/Textures/Pistol_01_Albedo.png",
+      "sha256": "48427643ae70dab477f6e577f6c1794295a768ab06aa9593f7a0b126fe675b4c",
+      "bytes": 98716,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "48427643ae70dab477f6e577f6c1794295a768ab06aa9593f7a0b126fe675b4c"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Pistol_01/Textures/Pistol_01_silhouette.png",
+      "sha256": "89a03b8ef2d6553dbc4411bc9639a195ba8e6e071889edb4df07199c350d8227",
+      "bytes": 525885,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "89a03b8ef2d6553dbc4411bc9639a195ba8e6e071889edb4df07199c350d8227"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Rifle_01/BlendFile/Rifle_01.blend",
+      "sha256": "1f63a8ff1170eae75df6f8aeb67f0f1314ceff574add07058c492675a3991214",
+      "bytes": 1844288,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1f63a8ff1170eae75df6f8aeb67f0f1314ceff574add07058c492675a3991214"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Rifle_01/Textures/Rifle_01_Albedo.png",
+      "sha256": "45cfb16bab1f80b9f3d03d00167278de37db4a7c7b2e4849210196197edf439e",
+      "bytes": 127618,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "45cfb16bab1f80b9f3d03d00167278de37db4a7c7b2e4849210196197edf439e"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Rifle_01/Textures/Rifle_01_silhouette.png",
+      "sha256": "64d15880256939bb7ed84bfd7800b87a01f87a8ca712e469b9dd253c0afcfd44",
+      "bytes": 525887,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "64d15880256939bb7ed84bfd7800b87a01f87a8ca712e469b9dd253c0afcfd44"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/SMG_01/BlendFile/SMG_01.blend",
+      "sha256": "263ac4975de5339b573ee2d78a89ea06c879572017362555444d5c96893f86fe",
+      "bytes": 1381808,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "263ac4975de5339b573ee2d78a89ea06c879572017362555444d5c96893f86fe"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/SMG_01/Textures/SMG_01_Albedo.png",
+      "sha256": "ac06f89becaa8b119ee89cba34f3772d54d4b813e9d6068be32655f47faf7217",
+      "bytes": 93312,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ac06f89becaa8b119ee89cba34f3772d54d4b813e9d6068be32655f47faf7217"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/SMG_01/Textures/SMG_01_silhouette.png",
+      "sha256": "e5f4d8ef40a698e6dc9f1e2552c5193ec045c4315693c3f260551277c80eb8f1",
+      "bytes": 525885,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e5f4d8ef40a698e6dc9f1e2552c5193ec045c4315693c3f260551277c80eb8f1"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Shotgun_01/BlendFile/Shotgun_01.blend",
+      "sha256": "8523da10e308450b653a090fe49d9ee0f14672f83e76c4b7baac45e83ad01749",
+      "bytes": 1193384,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8523da10e308450b653a090fe49d9ee0f14672f83e76c4b7baac45e83ad01749"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Shotgun_01/Textures/Shotgun_01_Albedo.png",
+      "sha256": "bf7160c20df918855d9bc210b1a12a515ca7961a917cbfacde5bf6ebd0b82117",
+      "bytes": 158284,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bf7160c20df918855d9bc210b1a12a515ca7961a917cbfacde5bf6ebd0b82117"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Guns/Shotgun_01/Textures/Shotgun_01_silhouette.png",
+      "sha256": "16b73fa06dc67af5ee61129f519639e21764ad2d7eb1a3ecb1d097040939a78a",
+      "bytes": 525887,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "16b73fa06dc67af5ee61129f519639e21764ad2d7eb1a3ecb1d097040939a78a"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/Readme.pdf",
+      "sha256": "6f2c1ff9d1d165aca37ff288a0447d7091126b98874a87f7c4dc5328b5c42907",
+      "bytes": 94311,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6f2c1ff9d1d165aca37ff288a0447d7091126b98874a87f7c4dc5328b5c42907"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/readme-extracted.txt",
+      "sha256": "4ad60b01e1f59aa2f3b380b1cab59ca65ef06060b68143fd481a2e0a7f1e6b9c",
+      "bytes": 2070,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4ad60b01e1f59aa2f3b380b1cab59ca65ef06060b68143fd481a2e0a7f1e6b9c"
+    },
+    {
+      "path": "assets/source/kuptchi-weapons/source.json",
+      "sha256": "ef40ec9627000bf311d75b513ecfedbb80389deb5183abedbae3e158916acc02",
+      "bytes": 504,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ef40ec9627000bf311d75b513ecfedbb80389deb5183abedbae3e158916acc02"
+    },
+    {
+      "path": "assets/source/makehuman/LICENSE.ASSETS.md",
+      "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c",
+      "bytes": 6962,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c"
+    },
+    {
+      "path": "assets/source/makehuman/LICENSE.md",
+      "sha256": "edd99571ca62698f78c943fd4fffb159a413c315fa0d4819d3cec5cadaf8b4f1",
+      "bytes": 3598,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "edd99571ca62698f78c943fd4fffb159a413c315fa0d4819d3cec5cadaf8b4f1"
+    },
+    {
+      "path": "assets/source/makehuman/base.obj",
+      "sha256": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c",
+      "bytes": 1749303,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c"
+    },
+    {
+      "path": "assets/source/mpfb-ct/README.md",
+      "sha256": "877cc54c09f282bc795447997c890a44f06fe68d8f295b35f2f191a0267d782f",
+      "bytes": 1089,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "877cc54c09f282bc795447997c890a44f06fe68d8f295b35f2f191a0267d782f"
+    },
+    {
+      "path": "assets/source/mpfb-ct/gas-mask-pilot-attribution.json",
+      "sha256": "e0b8de3005f76582c0f20b3306115b8f023d50796030b5559afd59c97ee3ff1e",
+      "bytes": 1798,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e0b8de3005f76582c0f20b3306115b8f023d50796030b5559afd59c97ee3ff1e"
+    },
+    {
+      "path": "assets/source/mpfb/packs/equipment03-source.json",
+      "sha256": "1201e831cbe794f5fe83e0632e2410e9fb8a351402321a650ac6012cd36dc268",
+      "bytes": 333,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1201e831cbe794f5fe83e0632e2410e9fb8a351402321a650ac6012cd36dc268"
+    },
+    {
+      "path": "assets/source/mpfb/packs/gloves01-source.json",
+      "sha256": "4a74710153eb2ee72d889243635b4a09ed1eddd5d3a0f6de7ca1b5f93c1a947e",
+      "bytes": 274,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4a74710153eb2ee72d889243635b4a09ed1eddd5d3a0f6de7ca1b5f93c1a947e"
+    },
+    {
+      "path": "assets/source/mpfb/packs/hats02-source.json",
+      "sha256": "7ed5b25cd36b128a56d9c84259cb267efc93889927f53e7339960b30ab2d68ce",
+      "bytes": 269,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7ed5b25cd36b128a56d9c84259cb267efc93889927f53e7339960b30ab2d68ce"
+    },
+    {
+      "path": "assets/source/mpfb/packs/makehuman_system_assets-source.json",
+      "sha256": "599c9e808d460dce49b56550457ea645954f4ef04dfcc431e5009fa80f5af98f",
+      "bytes": 321,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "599c9e808d460dce49b56550457ea645954f4ef04dfcc431e5009fa80f5af98f"
+    },
+    {
+      "path": "assets/source/mpfb/packs/masks01-source.json",
+      "sha256": "300b5bbb2bb0eb60a03157c5f008ab970c69c98d7f59c70faafb4394a2af74e5",
+      "bytes": 271,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "300b5bbb2bb0eb60a03157c5f008ab970c69c98d7f59c70faafb4394a2af74e5"
+    },
+    {
+      "path": "assets/source/mpfb/packs/masks02-source.json",
+      "sha256": "862d4231e73996c334f866669433f728db28376a0d239d5e4ff09cce9753e00f",
+      "bytes": 636,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "862d4231e73996c334f866669433f728db28376a0d239d5e4ff09cce9753e00f"
+    },
+    {
+      "path": "assets/source/mpfb/packs/shoes01-source.json",
+      "sha256": "061546424ad6a948fa4b009a9449e4b3dbabb52a44a1b062b3466173409209d3",
+      "bytes": 272,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "061546424ad6a948fa4b009a9449e4b3dbabb52a44a1b062b3466173409209d3"
+    },
+    {
+      "path": "assets/source/mpfb/packs/suits03-source.json",
+      "sha256": "59fbcffef8fa11d71a45973169cc5cb4f0750d015aaca92d2e7f53a697de1472",
+      "bytes": 275,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "59fbcffef8fa11d71a45973169cc5cb4f0750d015aaca92d2e7f53a697de1472"
+    },
+    {
+      "path": "assets/source/mpfb/source.json",
+      "sha256": "976e214fd755b5b0d1ec4b646e4f1edcf3de902af747f7232e83bb2a1ea6af5b",
+      "bytes": 391,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "976e214fd755b5b0d1ec4b646e4f1edcf3de902af747f7232e83bb2a1ea6af5b"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/SOURCE.md",
+      "sha256": "951c98fe6b7c27ec742b1fa12a169c853aeede0c0799317c0250d329173c7f7f",
+      "bytes": 1129,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "951c98fe6b7c27ec742b1fa12a169c853aeede0c0799317c0250d329173c7f7f"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/Universal-Animation-Library-Standard.zip",
+      "sha256": "cc73fc4e495b82958207316596317a3f40b9fa38065bde1027937452da537724",
+      "bytes": 15904933,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "cc73fc4e495b82958207316596317a3f40b9fa38065bde1027937452da537724"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/source.json",
+      "sha256": "f121c1d27159c544abdb15ae815daa5ff6b8e616185f0b3a1515bfddf56f70a6",
+      "bytes": 1861,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f121c1d27159c544abdb15ae815daa5ff6b8e616185f0b3a1515bfddf56f70a6"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/Godot_Setup.png",
+      "sha256": "8fde3e49385c3b3dc214bfe2bc61dde6f873a06f57cab9b245c8fc2543bc7496",
+      "bytes": 499312,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8fde3e49385c3b3dc214bfe2bc61dde6f873a06f57cab9b245c8fc2543bc7496"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/License.txt",
+      "sha256": "d77329b05c4c206e76c83285ecdd1e5f2b3df2350ec80657ebdb5a706a0fc0de",
+      "bytes": 320,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d77329b05c4c206e76c83285ecdd1e5f2b3df2350ec80657ebdb5a706a0fc0de"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/README.txt",
+      "sha256": "179f2b6a09ba516650aab0d89d2e573a7486ee49ae1518cc6941400510db4e69",
+      "bytes": 683,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "179f2b6a09ba516650aab0d89d2e573a7486ee49ae1518cc6941400510db4e69"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/Unity/UAL1_Standard.fbx",
+      "sha256": "21b32d912da3cb93426d974fb945e86f5b2e86970acd2ce89905e0fbf9f1dcc2",
+      "bytes": 23754684,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "21b32d912da3cb93426d974fb945e86f5b2e86970acd2ce89905e0fbf9f1dcc2"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/Unity/UAL1_Standard_RM.fbx",
+      "sha256": "5a5f5de6f18e9c91cdbc40eb26319ec85cc45070bc00965bc2737beb4b2984ea",
+      "bytes": 23767852,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5a5f5de6f18e9c91cdbc40eb26319ec85cc45070bc00965bc2737beb4b2984ea"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/Unity_Setup.png",
+      "sha256": "1f9ac00f442c4342fae060150a2cfb5a825f7e3b6e8ffd8ce01044e4fe31f7c9",
+      "bytes": 237945,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1f9ac00f442c4342fae060150a2cfb5a825f7e3b6e8ffd8ce01044e4fe31f7c9"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb",
+      "sha256": "69591853d817488edaa8fd9bf8fc1d821eaeaf789f8627b3cd23b41c4ed67997",
+      "bytes": 7618436,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "69591853d817488edaa8fd9bf8fc1d821eaeaf789f8627b3cd23b41c4ed67997"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard_RM.glb",
+      "sha256": "be684571ed655a1b892c2c07e6e2aeca053b606c442d34004adaf1d944090d01",
+      "bytes": 7620504,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "be684571ed655a1b892c2c07e6e2aeca053b606c442d34004adaf1d944090d01"
+    },
+    {
+      "path": "assets/source/quaternius-universal-animation/standard/Universal Animation Library[Standard]/Unreal_Setup.png",
+      "sha256": "c2c64e659943c634f538329ea0904f7902ab4194d0aaae77ac486d236171d00c",
+      "bytes": 148412,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c2c64e659943c634f538329ea0904f7902ab4194d0aaae77ac486d236171d00c"
+    },
+    {
+      "path": "assets/source/reused-ak/LICENSE",
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+      "bytes": 7048,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+    },
+    {
+      "path": "assets/source/reused-ak/SKM_AK47.fbx",
+      "sha256": "b477a963e34173eee5814c731416926386305cdb2caacfd5ce6310eadc26b34f",
+      "bytes": 865420,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b477a963e34173eee5814c731416926386305cdb2caacfd5ce6310eadc26b34f"
+    },
+    {
+      "path": "assets/source/reused-ak/T_AK47_C.png",
+      "sha256": "2b1d7dd605e799f395e1b16971d3d3f87f8ba0c064b7640d47cf4fa093117ae2",
+      "bytes": 6436445,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "2b1d7dd605e799f395e1b16971d3d3f87f8ba0c064b7640d47cf4fa093117ae2"
+    },
+    {
+      "path": "assets/source/reused-ak/T_AK47_N.png",
+      "sha256": "9022f2c3b43102ba3a9ec572b6a343762bedc8c6ed173003814a940a7c693dd1",
+      "bytes": 6110389,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9022f2c3b43102ba3a9ec572b6a343762bedc8c6ed173003814a940a7c693dd1"
+    },
+    {
+      "path": "assets/source/reused-ak/T_AK47_RMAO.png",
+      "sha256": "57ccf839b2bad454c6c44f8cd3ee720c5553c9c3b3b51252365f9a797c650b0f",
+      "bytes": 3525646,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "57ccf839b2bad454c6c44f8cd3ee720c5553c9c3b3b51252365f9a797c650b0f"
+    },
+    {
+      "path": "assets/source/reused-ak/arm_albedo_dark.png",
+      "sha256": "10683441d56b2d06d7ed0cc5cd9f9d18b216b255494007c5fe1e2271cccef5d1",
+      "bytes": 280792,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "10683441d56b2d06d7ed0cc5cd9f9d18b216b255494007c5fe1e2271cccef5d1"
+    },
+    {
+      "path": "assets/source/reused-ak/arm_albedo_pale.png",
+      "sha256": "a856d5dab7d1da5b7c00faf12efd53cd41f3bf59b586679d444c341c6dc81a9d",
+      "bytes": 386193,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a856d5dab7d1da5b7c00faf12efd53cd41f3bf59b586679d444c341c6dc81a9d"
+    },
+    {
+      "path": "assets/source/reused-ak/arms.blend",
+      "sha256": "ccbdb02c33cfc028aa51a7082295078b536bb9b411ab02a057b49beb667ed61c",
+      "bytes": 839018,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ccbdb02c33cfc028aa51a7082295078b536bb9b411ab02a057b49beb667ed61c"
+    },
+    {
+      "path": "assets/source/reused-ak/license.txt",
+      "sha256": "58c37f52e675ab8b2d2ad51820b3a121607583be4c0c72fc0859dc418a5eb6a3",
+      "bytes": 224,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "58c37f52e675ab8b2d2ad51820b3a121607583be4c0c72fc0859dc418a5eb6a3"
+    },
+    {
+      "path": "assets/source/reused-ak/source.json",
+      "sha256": "249bd55407198e1bef31b0dc8797138c85873390ca0e4430e5c3d5da2b9c8e9d",
+      "bytes": 1092,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "249bd55407198e1bef31b0dc8797138c85873390ca0e4430e5c3d5da2b9c8e9d"
+    },
+    {
+      "path": "assets/source/reused-ak/stein-license.txt",
+      "sha256": "58c37f52e675ab8b2d2ad51820b3a121607583be4c0c72fc0859dc418a5eb6a3",
+      "bytes": 224,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "58c37f52e675ab8b2d2ad51820b3a121607583be4c0c72fc0859dc418a5eb6a3"
+    },
+    {
+      "path": "assets/source/reused-ak/stein-source.json",
+      "sha256": "5d0504cb57540bcef92611691fab46585a2801acf98314810a2838299b86cf62",
+      "bytes": 7308,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5d0504cb57540bcef92611691fab46585a2801acf98314810a2838299b86cf62"
+    },
+    {
+      "path": "assets/source/reused-ak/wrad-license.txt",
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+      "bytes": 7048,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+    },
+    {
+      "path": "assets/source/reused-ak/wrad-source.json",
+      "sha256": "249bd55407198e1bef31b0dc8797138c85873390ca0e4430e5c3d5da2b9c8e9d",
+      "bytes": 1092,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "249bd55407198e1bef31b0dc8797138c85873390ca0e4430e5c3d5da2b9c8e9d"
+    },
+    {
+      "path": "assets/source/stein-classic-weapons/source.json",
+      "sha256": "5d0504cb57540bcef92611691fab46585a2801acf98314810a2838299b86cf62",
+      "bytes": 7308,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5d0504cb57540bcef92611691fab46585a2801acf98314810a2838299b86cf62"
+    },
+    {
+      "path": "assets/source/tabasco-smallarms/SOURCE.md",
+      "sha256": "4b78d4297c6a0611511f70708fda64394e43a130434ef8d8cbf1896724997545",
+      "bytes": 698,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4b78d4297c6a0611511f70708fda64394e43a130434ef8d8cbf1896724997545"
+    },
+    {
+      "path": "assets/source/tabasco-smallarms/source.json",
+      "sha256": "ecf08e3018ee0d626adc6799a0953ff049a82248b376d9821e76cea352b24420",
+      "bytes": 1541,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ecf08e3018ee0d626adc6799a0953ff049a82248b376d9821e76cea352b24420"
+    },
+    {
+      "path": "assets/source/viewmodels/ak-pilot.blend",
+      "sha256": "f4de581068661ab175b3f29907050519e01bb02d175f8e6d0a25c78dd54754e5",
+      "bytes": 791611,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f4de581068661ab175b3f29907050519e01bb02d175f8e6d0a25c78dd54754e5"
+    },
+    {
+      "path": "assets/source/viewmodels/posed-hands.json",
+      "sha256": "f3b32996973d55c0c378f4366d2afc47ea662168c6388896bc8de45765cb664f",
+      "bytes": 223840,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f3b32996973d55c0c378f4366d2afc47ea662168c6388896bc8de45765cb664f"
+    },
+    {
+      "path": "assets/source/wrad-arms/LICENSE",
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+      "bytes": 7048,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+    },
+    {
+      "path": "assets/source/wrad-arms/README.md",
+      "sha256": "58eef1a23ed8cbd8453f00146ee5a2d23961ea0989c8ccd669164658cb4ae91f",
+      "bytes": 2401,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "58eef1a23ed8cbd8453f00146ee5a2d23961ea0989c8ccd669164658cb4ae91f"
+    },
+    {
+      "path": "assets/source/wrad-arms/arm_albedo_dark.png",
+      "sha256": "10683441d56b2d06d7ed0cc5cd9f9d18b216b255494007c5fe1e2271cccef5d1",
+      "bytes": 280792,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "10683441d56b2d06d7ed0cc5cd9f9d18b216b255494007c5fe1e2271cccef5d1"
+    },
+    {
+      "path": "assets/source/wrad-arms/arm_albedo_pale.png",
+      "sha256": "a856d5dab7d1da5b7c00faf12efd53cd41f3bf59b586679d444c341c6dc81a9d",
+      "bytes": 386193,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a856d5dab7d1da5b7c00faf12efd53cd41f3bf59b586679d444c341c6dc81a9d"
+    },
+    {
+      "path": "assets/source/wrad-arms/arms.blend",
+      "sha256": "ccbdb02c33cfc028aa51a7082295078b536bb9b411ab02a057b49beb667ed61c",
+      "bytes": 839018,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ccbdb02c33cfc028aa51a7082295078b536bb9b411ab02a057b49beb667ed61c"
+    },
+    {
+      "path": "assets/source/wrad-arms/arms.glb",
+      "sha256": "580efbb0852bf0b41f82dd3e17eafec86b3d2a48f4a7acaa7e64d60e850f565d",
+      "bytes": 456328,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "580efbb0852bf0b41f82dd3e17eafec86b3d2a48f4a7acaa7e64d60e850f565d"
+    },
+    {
+      "path": "assets/source/wrad-arms/source.json",
+      "sha256": "249bd55407198e1bef31b0dc8797138c85873390ca0e4430e5c3d5da2b9c8e9d",
+      "bytes": 1092,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "249bd55407198e1bef31b0dc8797138c85873390ca0e4430e5c3d5da2b9c8e9d"
+    },
+    {
+      "path": "docs/integration/JKH-127.md",
+      "sha256": "0080ff669b1caa361aceb17352e1490a2308e637b7a9d350dcf88c9bfd4a9ab8",
+      "bytes": 5135,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "0080ff669b1caa361aceb17352e1490a2308e637b7a9d350dcf88c9bfd4a9ab8"
+    },
+    {
+      "path": "docs/integration/JKH-128.md",
+      "sha256": "6a4ead052e9416a7d9e038296cb89962f47e13b9a9be82e92856f168b6e4f39a",
+      "bytes": 8889,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6a4ead052e9416a7d9e038296cb89962f47e13b9a9be82e92856f168b6e4f39a"
+    },
+    {
+      "path": "docs/integration/JKH-129.md",
+      "sha256": "5d87ea3246700a85aee3fa7cc9cfbcc3891d8f827d843469392134876f05eda1",
+      "bytes": 14669,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5d87ea3246700a85aee3fa7cc9cfbcc3891d8f827d843469392134876f05eda1"
+    },
+    {
+      "path": "docs/integration/JKH-130.md",
+      "sha256": "46d9d5857c8bf884c6c1bf8973c416ce07f79a6dce6c0314f1af7a0ab5d77052",
+      "bytes": 24033,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "46d9d5857c8bf884c6c1bf8973c416ce07f79a6dce6c0314f1af7a0ab5d77052"
+    },
+    {
+      "path": "docs/integration/JKH-144.md",
+      "sha256": "220fba3fc85cb5c5375c2a7779f7db0c4da2f31a6ca10e5a726822671bdcaf67",
+      "bytes": 4042,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "220fba3fc85cb5c5375c2a7779f7db0c4da2f31a6ca10e5a726822671bdcaf67"
+    },
+    {
+      "path": "docs/integration/jkh-128/closure-classification.md",
+      "sha256": "8043209e42a995b5f6532694cbd713ef7f0d1241736c746c0c565b567f2686d2",
+      "bytes": 1369,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8043209e42a995b5f6532694cbd713ef7f0d1241736c746c0c565b567f2686d2"
+    },
+    {
+      "path": "memory/sessions/2026-09-15T054124Z.md",
+      "sha256": "42f40da40224db2a8e76c4044d83b1e9570dd950232281abcad59629103db48a",
+      "bytes": 4465,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "42f40da40224db2a8e76c4044d83b1e9570dd950232281abcad59629103db48a"
+    },
+    {
+      "path": "next.config.ts",
+      "sha256": "d063bebef3a4878ae82f9f9547c2c9675b8b6945ab23702932dcb63a011a9fc9",
+      "bytes": 104,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d063bebef3a4878ae82f9f9547c2c9675b8b6945ab23702932dcb63a011a9fc9"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "fe14697ad0d714aa28f5a9a532b32992c5ff2eb3452ecf6cc00e3e89b7e57cab",
+      "bytes": 452359,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fe14697ad0d714aa28f5a9a532b32992c5ff2eb3452ecf6cc00e3e89b7e57cab"
+    },
+    {
+      "path": "package.json",
+      "sha256": "f2c0d2c44fe576125fd7217da07a32ba81e9aa8253e0a532a1f0d83a5e99e49d",
+      "bytes": 2766,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f2c0d2c44fe576125fd7217da07a32ba81e9aa8253e0a532a1f0d83a5e99e49d"
+    },
+    {
+      "path": "public/assets/characters/CT_SOURCE.md",
+      "sha256": "861dda5f31012ca8323e0e81accfe5898967bce4a462b700720ee4d953dd5e2b",
+      "bytes": 3011,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "861dda5f31012ca8323e0e81accfe5898967bce4a462b700720ee4d953dd5e2b"
+    },
+    {
+      "path": "public/assets/characters/SOURCE.md",
+      "sha256": "a69de91fa5fbfdbd068b951339d14898d300cf650ad4697abde4bc1a4c68a67e",
+      "bytes": 817,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a69de91fa5fbfdbd068b951339d14898d300cf650ad4697abde4bc1a4c68a67e"
+    },
+    {
+      "path": "public/assets/characters/ct-mpfb.glb",
+      "sha256": "e85a0dd18270caee23a12ef4970868323ac0be1bf7cd21b823af49158e6cf1f8",
+      "bytes": 1720480,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e85a0dd18270caee23a12ef4970868323ac0be1bf7cd21b823af49158e6cf1f8"
+    },
+    {
+      "path": "public/assets/characters/ct-pilot.glb",
+      "sha256": "8cb113ac7dd8da0208779fa3a1449ab2c79e349a1279fe1f6ddd56e4560d99a9",
+      "bytes": 1964344,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8cb113ac7dd8da0208779fa3a1449ab2c79e349a1279fe1f6ddd56e4560d99a9"
+    },
+    {
+      "path": "public/assets/characters/vanguard.glb",
+      "sha256": "dfb230fc1f942f259dd00281a1186953ad602fc5d69067ce63e24b2aa439736b",
+      "bytes": 2160468,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "dfb230fc1f942f259dd00281a1186953ad602fc5d69067ce63e24b2aa439736b"
+    },
+    {
+      "path": "public/assets/environment/DESERT_HORIZON_SOURCE.md",
+      "sha256": "f505ef966045c30a6dee534b37b1cf3648550b62b5ca574c233fa1776ddcfe69",
+      "bytes": 3301,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f505ef966045c30a6dee534b37b1cf3648550b62b5ca574c233fa1776ddcfe69"
+    },
+    {
+      "path": "public/assets/environment/desert-mountain-panorama.png",
+      "sha256": "b82618a3fbc244ccaa79de6f973776be934f6703d8d641c40e63824cb9866e88",
+      "bytes": 2353670,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b82618a3fbc244ccaa79de6f973776be934f6703d8d641c40e63824cb9866e88"
+    },
+    {
+      "path": "public/assets/textures/README.md",
+      "sha256": "0cb007680f049eb54d72515826a2177ab78d4788fd80ff2b6e30b546e9f59765",
+      "bytes": 469,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "0cb007680f049eb54d72515826a2177ab78d4788fd80ff2b6e30b546e9f59765"
+    },
+    {
+      "path": "public/assets/textures/cobblestone_floor_08_diff_1k.jpg",
+      "sha256": "ec131f7a99a1e7f9df25d4725609c55a6dad1df487630685e9a66ecbf41ec33a",
+      "bytes": 585727,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ec131f7a99a1e7f9df25d4725609c55a6dad1df487630685e9a66ecbf41ec33a"
+    },
+    {
+      "path": "public/assets/textures/cobblestone_floor_08_nor_gl_1k.jpg",
+      "sha256": "26bfff70b266a4e86983814c7e56a9b48daf93cd34dcdc16a5db13e4fabcfbb6",
+      "bytes": 1002410,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "26bfff70b266a4e86983814c7e56a9b48daf93cd34dcdc16a5db13e4fabcfbb6"
+    },
+    {
+      "path": "public/assets/textures/large_sandstone_blocks_diff_1k.jpg",
+      "sha256": "2ad242551c841b0c3227bdaec693acc4a4fff3fee6a9576aa501310af2595ee9",
+      "bytes": 750937,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "2ad242551c841b0c3227bdaec693acc4a4fff3fee6a9576aa501310af2595ee9"
+    },
+    {
+      "path": "public/assets/textures/large_sandstone_blocks_nor_gl_1k.jpg",
+      "sha256": "7b258af6729615a78aff76ceaa153b23011bd1df39b370b7a7e06ad6193b5d82",
+      "bytes": 714290,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7b258af6729615a78aff76ceaa153b23011bd1df39b370b7a7e06ad6193b5d82"
+    },
+    {
+      "path": "public/assets/textures/plastered_stone_wall_diff_1k.jpg",
+      "sha256": "b86e9a408aac5b493c31a4ec221e5022b0b704d2f51596006f7d6840a6a3300a",
+      "bytes": 680077,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b86e9a408aac5b493c31a4ec221e5022b0b704d2f51596006f7d6840a6a3300a"
+    },
+    {
+      "path": "public/assets/textures/plastered_stone_wall_nor_gl_1k.jpg",
+      "sha256": "c64dc8d1ad382b8832e430e738f099343ed959b7ae7d9390919a497536d1191e",
+      "bytes": 1041406,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c64dc8d1ad382b8832e430e738f099343ed959b7ae7d9390919a497536d1191e"
+    },
+    {
+      "path": "public/assets/textures/viewmodel/README.md",
+      "sha256": "7aafb1757cda446f6fc5d75d5bde73fa762092c8f381d1f9c0304308568d4755",
+      "bytes": 1611,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7aafb1757cda446f6fc5d75d5bde73fa762092c8f381d1f9c0304308568d4755"
+    },
+    {
+      "path": "public/assets/textures/viewmodel/classic-surface-detail.jpg",
+      "sha256": "d22c65d2823afd4d12d73424d63268ee945be7f7f1a30b6bf270f713a5cc63c3",
+      "bytes": 68090,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d22c65d2823afd4d12d73424d63268ee945be7f7f1a30b6bf270f713a5cc63c3"
+    },
+    {
+      "path": "public/assets/viewmodels/M4_SOURCE.md",
+      "sha256": "797f6222c571bee49d784d5e21a5547a53559fa123722e52e65bd4dba4fa00ff",
+      "bytes": 3835,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "797f6222c571bee49d784d5e21a5547a53559fa123722e52e65bd4dba4fa00ff"
+    },
+    {
+      "path": "public/assets/viewmodels/SOURCE.md",
+      "sha256": "8069fbe3e913cf86894bc8738f8df373cbc0acfbe463c99e10b5cae9c88978ff",
+      "bytes": 1269,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8069fbe3e913cf86894bc8738f8df373cbc0acfbe463c99e10b5cae9c88978ff"
+    },
+    {
+      "path": "public/assets/viewmodels/ak-pilot.glb",
+      "sha256": "2c755a3d2b8d23331c1e7ef73877f0c797649e6e5e2ed1d5239a71be195e9fdf",
+      "bytes": 2850380,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "2c755a3d2b8d23331c1e7ef73877f0c797649e6e5e2ed1d5239a71be195e9fdf"
+    },
+    {
+      "path": "public/assets/viewmodels/ak47.glb",
+      "sha256": "bbb267913c94ed2eeb6f1d5bd4ea2b9b96f2967e8345a9d2b6c9e195a15d99f0",
+      "bytes": 7013624,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bbb267913c94ed2eeb6f1d5bd4ea2b9b96f2967e8345a9d2b6c9e195a15d99f0"
+    },
+    {
+      "path": "public/assets/viewmodels/glock18.glb",
+      "sha256": "49c61e2b0b4f3bf1804925a3959e6c3b49adc05b6595130ce989fa6b819ee2d4",
+      "bytes": 794696,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "49c61e2b0b4f3bf1804925a3959e6c3b49adc05b6595130ce989fa6b819ee2d4"
+    },
+    {
+      "path": "public/assets/viewmodels/m4a1.glb",
+      "sha256": "7b0cd03d34bdf5c7c020e2d39a47c72d9ad91f5dffa05665bccb7b894a98a5c3",
+      "bytes": 883644,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7b0cd03d34bdf5c7c020e2d39a47c72d9ad91f5dffa05665bccb7b894a98a5c3"
+    },
+    {
+      "path": "public/assets/viewmodels/recovery-material-atlas-v2.png",
+      "sha256": "ed2d2911e2027bee94d9a1406b11fab9d3713be75c391e83df89ce5f3042c0f8",
+      "bytes": 2626132,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ed2d2911e2027bee94d9a1406b11fab9d3713be75c391e83df89ce5f3042c0f8"
+    },
+    {
+      "path": "public/assets/viewmodels/recovery-material-atlas.png",
+      "sha256": "6ac3b6c38459cf3fa770c1b924470e0d533c82302a9646d3e689de6f29003b84",
+      "bytes": 3549981,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6ac3b6c38459cf3fa770c1b924470e0d533c82302a9646d3e689de6f29003b84"
+    },
+    {
+      "path": "public/favicon.svg",
+      "sha256": "e6d2e59b7b5bbb0342e0fb496dfc262decbfe4426bbb7b047aec8d467d1dc6f7",
+      "bytes": 712,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e6d2e59b7b5bbb0342e0fb496dfc262decbfe4426bbb7b047aec8d467d1dc6f7"
+    },
+    {
+      "path": "public/og.png",
+      "sha256": "c93174640eebeee272e56917a54112344ddda7f50ce43d57350f6ff7dd9f4c2c",
+      "bytes": 2431824,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c93174640eebeee272e56917a54112344ddda7f50ce43d57350f6ff7dd9f4c2c"
+    },
+    {
+      "path": "scripts/adapt-classic-carbine.py",
+      "sha256": "e3193f5e663499909002b547e8f90909b1ce6d4c5384531f009fff4c7ae4ec37",
+      "bytes": 42417,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e3193f5e663499909002b547e8f90909b1ce6d4c5384531f009fff4c7ae4ec37"
+    },
+    {
+      "path": "scripts/adapt-reused-ak-viewmodel.py",
+      "sha256": "ed5a18c2d8f13cf9d0442497863ba3d9c2cdf00743e1d9f83fb59c353d9bc8d4",
+      "bytes": 52983,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ed5a18c2d8f13cf9d0442497863ba3d9c2cdf00743e1d9f83fb59c353d9bc8d4"
+    },
+    {
+      "path": "scripts/author-ak-pilot.py",
+      "sha256": "5740498199cf800fac77dc010eb544309ba187ff74c9d5038d2a711a255816e0",
+      "bytes": 17162,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5740498199cf800fac77dc010eb544309ba187ff74c9d5038d2a711a255816e0"
+    },
+    {
+      "path": "scripts/author-ct-pilot.py",
+      "sha256": "36f82a9727d7b615b27560f312992e9952ea94051b3916095a76ea212e117f4f",
+      "bytes": 22174,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "36f82a9727d7b615b27560f312992e9952ea94051b3916095a76ea212e117f4f"
+    },
+    {
+      "path": "scripts/author-mpfb-ct-pilot.py",
+      "sha256": "bec056a47a40592ed50def2bcbfb345182b5264f749a2b21a7689fc1c89cf37d",
+      "bytes": 89239,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bec056a47a40592ed50def2bcbfb345182b5264f749a2b21a7689fc1c89cf37d"
+    },
+    {
+      "path": "scripts/authored-viewmodel-equivalence.mjs",
+      "sha256": "a295d9c5c73eae8dfa79dd3d4a960ed2058fd9def707d3a9c41871869c17520f",
+      "bytes": 24756,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a295d9c5c73eae8dfa79dd3d4a960ed2058fd9def707d3a9c41871869c17520f"
+    },
+    {
+      "path": "scripts/build-glock-reference.py",
+      "sha256": "fe9d388bf388fb6a3f00073b997b46837e55e93ee9ebcb885595ae37f84ec128",
+      "bytes": 20769,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fe9d388bf388fb6a3f00073b997b46837e55e93ee9ebcb885595ae37f84ec128"
+    },
+    {
+      "path": "scripts/export-classic-interaction-audio.ts",
+      "sha256": "3bcb3416450cfac0dc2b067455030e5266c48f6977add114af83c344bbf24a57",
+      "bytes": 1887,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "3bcb3416450cfac0dc2b067455030e5266c48f6977add114af83c344bbf24a57"
+    },
+    {
+      "path": "scripts/export-classic-usp-audio.ts",
+      "sha256": "8785e6ad5b55ef5ece972c16cab1bcd418d3c6e30b2b8cb4b8a8f79dd4c992cd",
+      "bytes": 1541,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8785e6ad5b55ef5ece972c16cab1bcd418d3c6e30b2b8cb4b8a8f79dd4c992cd"
+    },
+    {
+      "path": "scripts/export-glock-reference.py",
+      "sha256": "98e686a8313cde7c742675be31e6b4ccc54581c154d0e0df569d9a972d3a29c2",
+      "bytes": 5645,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "98e686a8313cde7c742675be31e6b4ccc54581c154d0e0df569d9a972d3a29c2"
+    },
+    {
+      "path": "scripts/export-kuptchi-carbine.py",
+      "sha256": "c603f409d271e6a0e3819786a6417fcda88cf2ee3e4a7fbf0086f5ddd14b875d",
+      "bytes": 49218,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c603f409d271e6a0e3819786a6417fcda88cf2ee3e4a7fbf0086f5ddd14b875d"
+    },
+    {
+      "path": "scripts/export-native-carbine.py",
+      "sha256": "902c084b50eacab02ed951137c5b4725e91ea7af24eb8a5787548c89d3ca994a",
+      "bytes": 30856,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "902c084b50eacab02ed951137c5b4725e91ea7af24eb8a5787548c89d3ca994a"
+    },
+    {
+      "path": "scripts/export-recovery-hand-source.ts",
+      "sha256": "20a11256fdc970a1f0cdda6a528b6c4cfc531b5420cbe32ec26fcf107dc767ba",
+      "bytes": 2084,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "20a11256fdc970a1f0cdda6a528b6c4cfc531b5420cbe32ec26fcf107dc767ba"
+    },
+    {
+      "path": "scripts/jkh-130-route-harness.ts",
+      "sha256": "e7f3cb93b5d2c46686db85729c958939baffa4be33e87812a7cd8e4ca490c63a",
+      "bytes": 10358,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e7f3cb93b5d2c46686db85729c958939baffa4be33e87812a7cd8e4ca490c63a"
+    },
+    {
+      "path": "scripts/live-skeleton-capture-lifecycle.mjs",
+      "sha256": "17ac5a357b95ff75adb13502416fd97718aa2e4088edd78ff6e22513f7ec14bb",
+      "bytes": 793,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "17ac5a357b95ff75adb13502416fd97718aa2e4088edd78ff6e22513f7ec14bb"
+    },
+    {
+      "path": "scripts/live-skeleton-sampling-contract.mjs",
+      "sha256": "e63e943d8c1b87a6b3d2a674a1aae2df96d930c74b2529028552e40b2a1b6cf0",
+      "bytes": 3811,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e63e943d8c1b87a6b3d2a674a1aae2df96d930c74b2529028552e40b2a1b6cf0"
+    },
+    {
+      "path": "scripts/measure-fixed-movement.ts",
+      "sha256": "842120af3fa43023931ba3b945489b456c1c34be72389508949ae82c2f28a1cf",
+      "bytes": 1479,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "842120af3fa43023931ba3b945489b456c1c34be72389508949ae82c2f28a1cf"
+    },
+    {
+      "path": "scripts/measure-movement.ts",
+      "sha256": "6e9f5b1afcc05d0a32a9c1ea1b316640d695c985030e918a952ab48d236f4ed6",
+      "bytes": 3186,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6e9f5b1afcc05d0a32a9c1ea1b316640d695c985030e918a952ab48d236f4ed6"
+    },
+    {
+      "path": "scripts/merge-authored-viewmodel-clips.mjs",
+      "sha256": "277011db9607e8c7a5bfe51f42a96482f798cedaf48fa506cced4447450be7c1",
+      "bytes": 8354,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "277011db9607e8c7a5bfe51f42a96482f798cedaf48fa506cced4447450be7c1"
+    },
+    {
+      "path": "scripts/orient-mpfb-character.mjs",
+      "sha256": "4cb94dcb0fefcc06a6d5c816ed6e3c4c6a1640a47541a84db5f461bfc9ec8d7d",
+      "bytes": 1960,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4cb94dcb0fefcc06a6d5c816ed6e3c4c6a1640a47541a84db5f461bfc9ec8d7d"
+    },
+    {
+      "path": "scripts/player-movement-harness.ts",
+      "sha256": "8020d2afa9b232229f9e9cb807f9b37923e0010e0d9a8f70430eb8d7d9f0d906",
+      "bytes": 1745,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8020d2afa9b232229f9e9cb807f9b37923e0010e0d9a8f70430eb8d7d9f0d906"
+    },
+    {
+      "path": "scripts/prepare-carbine-viewmodel.mjs",
+      "sha256": "128294f8e88e204e1dc0e48e701d57d8109b59cdfc5b05de6950093fdffebc42",
+      "bytes": 3658,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "128294f8e88e204e1dc0e48e701d57d8109b59cdfc5b05de6950093fdffebc42"
+    },
+    {
+      "path": "scripts/prepare-glock-materials.mjs",
+      "sha256": "701d33eaaceb44ebc4502a8ce14c78ebd082056a4bbee013e5250b3568fb7294",
+      "bytes": 3210,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "701d33eaaceb44ebc4502a8ce14c78ebd082056a4bbee013e5250b3568fb7294"
+    },
+    {
+      "path": "scripts/prepare-m4-fingerless-glove.mjs",
+      "sha256": "1b9830980826a150996c24009b5a511eff8459329eebe5adf6390087d49bd670",
+      "bytes": 17424,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1b9830980826a150996c24009b5a511eff8459329eebe5adf6390087d49bd670"
+    },
+    {
+      "path": "scripts/prepare-rifle-viewmodel.mjs",
+      "sha256": "be8757c9e3ab2feace3857bf3413cbcca0dfb00381187bf0300cf705e80d56ef",
+      "bytes": 3054,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "be8757c9e3ab2feace3857bf3413cbcca0dfb00381187bf0300cf705e80d56ef"
+    },
+    {
+      "path": "scripts/retarget-character-clips.mjs",
+      "sha256": "3367a798da39f342b7c0bc6dd948397efd3f9c2992b4f0da6f68e63eafa772ab",
+      "bytes": 9803,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "3367a798da39f342b7c0bc6dd948397efd3f9c2992b4f0da6f68e63eafa772ab"
+    },
+    {
+      "path": "scripts/retarget-character-death.mjs",
+      "sha256": "9e819224dffbdf6fa6ca90cdec1703eb14847d75d6a3eedaab9c25d7f3c99415",
+      "bytes": 17204,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9e819224dffbdf6fa6ca90cdec1703eb14847d75d6a3eedaab9c25d7f3c99415"
+    },
+    {
+      "path": "scripts/reuse-native-carbine-handle.py",
+      "sha256": "96b9de4cc9c7443b84bb6766e1ebd598ae89ce03fc9c63df073b65cee940f570",
+      "bytes": 37985,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "96b9de4cc9c7443b84bb6766e1ebd598ae89ce03fc9c63df073b65cee940f570"
+    },
+    {
+      "path": "scripts/setup-visual-tools.mjs",
+      "sha256": "720eb23b2a51b756569bb6a0b9bac3a71d90efa2bde72cbc121783c9ae2798f7",
+      "bytes": 3048,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "720eb23b2a51b756569bb6a0b9bac3a71d90efa2bde72cbc121783c9ae2798f7"
+    },
+    {
+      "path": "scripts/validate-gltf.mjs",
+      "sha256": "ba6174b2c335f9250e083c748bdb3d7a1963d4bfd63a0308d0b46dcd7b67fe6a",
+      "bytes": 2091,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ba6174b2c335f9250e083c748bdb3d7a1963d4bfd63a0308d0b46dcd7b67fe6a"
+    },
+    {
+      "path": "scripts/verify-fall-fixtures.mjs",
+      "sha256": "012fc4f9a5bdfb52d00592a9d0324eba3e17f40a7fc58e1d61f3aa3761303df5",
+      "bytes": 6663,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "012fc4f9a5bdfb52d00592a9d0324eba3e17f40a7fc58e1d61f3aa3761303df5"
+    },
+    {
+      "path": "scripts/verify-glock-runtime-smoke.mjs",
+      "sha256": "70b9115c2a4032adb0d183e0362c5c3ae390ee6e1b23b8a1ef373b36fc51989c",
+      "bytes": 11958,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "70b9115c2a4032adb0d183e0362c5c3ae390ee6e1b23b8a1ef373b36fc51989c"
+    },
+    {
+      "path": "scripts/verify-live-skeleton-sampling.mjs",
+      "sha256": "1b82e60a3fc67d737d5fbd0e0e918b6614563c2a6f2a294667120cd6ed730188",
+      "bytes": 8508,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1b82e60a3fc67d737d5fbd0e0e918b6614563c2a6f2a294667120cd6ed730188"
+    },
+    {
+      "path": "scripts/verify-runtime-input-smoke.mjs",
+      "sha256": "edb41cf03fcace600cd9460bcf1721669f1fd83db729cc4e94a0ebc6fed22f79",
+      "bytes": 4515,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "edb41cf03fcace600cd9460bcf1721669f1fd83db729cc4e94a0ebc6fed22f79"
+    },
+    {
+      "path": "scripts/verify-runtime-lifecycle-smoke.mjs",
+      "sha256": "ec20d73980abcfea879d8cc1648a3dbb5ff1088caf6bf491baa67f8072a5f7af",
+      "bytes": 4333,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ec20d73980abcfea879d8cc1648a3dbb5ff1088caf6bf491baa67f8072a5f7af"
+    },
+    {
+      "path": "scripts/visual-blender-bridge.mjs",
+      "sha256": "921d8011a8dd05d0bad9b7feb64d2288f7fd6e45df3c8a994d1b9456ef4de78a",
+      "bytes": 1000,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "921d8011a8dd05d0bad9b7feb64d2288f7fd6e45df3c8a994d1b9456ef4de78a"
+    },
+    {
+      "path": "scripts/visual-blender-bridge.py",
+      "sha256": "b71b27ae306db7e407e9f71837e143bc29cd3b8b13b7f636beb2182f20862a82",
+      "bytes": 1007,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b71b27ae306db7e407e9f71837e143bc29cd3b8b13b7f636beb2182f20862a82"
+    },
+    {
+      "path": "scripts/visual-blender-preview.py",
+      "sha256": "df17d6ce9596db363b59f9b31643cf13b0f414f9855346b239318cbd845bf4d8",
+      "bytes": 9933,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "df17d6ce9596db363b59f9b31643cf13b0f414f9855346b239318cbd845bf4d8"
+    },
+    {
+      "path": "scripts/visual-blender.mjs",
+      "sha256": "0dd110a10ce73ff835399cff013cf54ae369330b5d81be52ff689cc097f644f2",
+      "bytes": 1600,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "0dd110a10ce73ff835399cff013cf54ae369330b5d81be52ff689cc097f644f2"
+    },
+    {
+      "path": "scripts/visual-capture.mjs",
+      "sha256": "986521cacf0711e4d2716ef12e9a1b32443ba6eaed72e20a8fea6f675f30d010",
+      "bytes": 12989,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "986521cacf0711e4d2716ef12e9a1b32443ba6eaed72e20a8fea6f675f30d010"
+    },
+    {
+      "path": "scripts/visual-compare.mjs",
+      "sha256": "41ebff8b022b6a2678e973477860e12e319877c4dcbcf655a9fb870c9cc44998",
+      "bytes": 4280,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "41ebff8b022b6a2678e973477860e12e319877c4dcbcf655a9fb870c9cc44998"
+    },
+    {
+      "path": "scripts/visual-diagnostics.mjs",
+      "sha256": "70cf8975cd31e8dd452fa327a5c946eb0914c06428acdf181a025fdc3c386718",
+      "bytes": 2898,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "70cf8975cd31e8dd452fa327a5c946eb0914c06428acdf181a025fdc3c386718"
+    },
+    {
+      "path": "scripts/visual-reference.mjs",
+      "sha256": "1f90ae0b6f5916aa6ba31f2a97f4a0d7d7632128fb474f3c748297edd7981714",
+      "bytes": 9763,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1f90ae0b6f5916aa6ba31f2a97f4a0d7d7632128fb474f3c748297edd7981714"
+    },
+    {
+      "path": "scripts/visual-toolkit-common.mjs",
+      "sha256": "71674ccb80cefdc16da54a06e7538af084400ae9fa1d8f18f0714e1da1c022dc",
+      "bytes": 10460,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "71674ccb80cefdc16da54a06e7538af084400ae9fa1d8f18f0714e1da1c022dc"
+    },
+    {
+      "path": "scripts/visual-verify-replay.mjs",
+      "sha256": "a9d0b15d2d32a33bd0a0932a5f9f9cf1a073460def5251ef91ab36b2f1d9880d",
+      "bytes": 3257,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a9d0b15d2d32a33bd0a0932a5f9f9cf1a073460def5251ef91ab36b2f1d9880d"
+    },
+    {
+      "path": "tests/actual-round-start.test.ts",
+      "sha256": "15f11329d0f7154d886b46ecdf534eaad8abdb1c7fb3ad2f773b74fb74b8cffe",
+      "bytes": 1671,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "15f11329d0f7154d886b46ecdf534eaad8abdb1c7fb3ad2f773b74fb74b8cffe"
+    },
+    {
+      "path": "tests/authored-carbine-viewmodel.test.ts",
+      "sha256": "a3dd2dbd78671b97a760b61f3688d4d8eed37deb845ee385a97943d78c68f19e",
+      "bytes": 10136,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a3dd2dbd78671b97a760b61f3688d4d8eed37deb845ee385a97943d78c68f19e"
+    },
+    {
+      "path": "tests/authored-pistol-viewmodel.test.ts",
+      "sha256": "fb25be26baadfc7e14db5c95a40acae1e9e1efbf5f5597829a2c6e86397c6074",
+      "bytes": 5883,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fb25be26baadfc7e14db5c95a40acae1e9e1efbf5f5597829a2c6e86397c6074"
+    },
+    {
+      "path": "tests/authored-rifle-viewmodel.test.ts",
+      "sha256": "781a4c91cb035e90f9c07251ffb2b52c7e238e955671afa98db0d1fcfabe7629",
+      "bytes": 6097,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "781a4c91cb035e90f9c07251ffb2b52c7e238e955671afa98db0d1fcfabe7629"
+    },
+    {
+      "path": "tests/bot-animation.test.ts",
+      "sha256": "745a3a3a3c61d0936c5fe6e68102ccf5f6cbdde5de94ee93cfc5aed6d26359bd",
+      "bytes": 10904,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "745a3a3a3c61d0936c5fe6e68102ccf5f6cbdde5de94ee93cfc5aed6d26359bd"
+    },
+    {
+      "path": "tests/bot-difficulty-parity.test.ts",
+      "sha256": "b7784e502aec660bd53419e77fa91243ee94b9aa296539047980c3f1e6a64bec",
+      "bytes": 3224,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b7784e502aec660bd53419e77fa91243ee94b9aa296539047980c3f1e6a64bec"
+    },
+    {
+      "path": "tests/bot-economy.test.ts",
+      "sha256": "6219fec17a2e33fbbe7291d8a67dd38555edfd69d0542b945d5ea52c5831b4f0",
+      "bytes": 5396,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6219fec17a2e33fbbe7291d8a67dd38555edfd69d0542b945d5ea52c5831b4f0"
+    },
+    {
+      "path": "tests/bot-glock-burst.test.ts",
+      "sha256": "304b8e8af23040306555480fdadaa6cba7e86e5e7824d14609002f07bbe33d41",
+      "bytes": 6327,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "304b8e8af23040306555480fdadaa6cba7e86e5e7824d14609002f07bbe33d41"
+    },
+    {
+      "path": "tests/bot-ground-movement.test.ts",
+      "sha256": "ae78ec133c8bf175666c3ffea27c153cecb206ed0b2813b4692f1710761d850b",
+      "bytes": 2043,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ae78ec133c8bf175666c3ffea27c153cecb206ed0b2813b4692f1710761d850b"
+    },
+    {
+      "path": "tests/bot-hearing.test.ts",
+      "sha256": "d617f96cad169505f5785538acc7c807fca12edfa46a9210a379460f48d9cae0",
+      "bytes": 6047,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d617f96cad169505f5785538acc7c807fca12edfa46a9210a379460f48d9cae0"
+    },
+    {
+      "path": "tests/bot-hull-motion.test.ts",
+      "sha256": "15584c61afd917000d1e54fafce276bd27c8b2cd376014c797157fdca4f25ea4",
+      "bytes": 7953,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "15584c61afd917000d1e54fafce276bd27c8b2cd376014c797157fdca4f25ea4"
+    },
+    {
+      "path": "tests/bot-locomotion.test.ts",
+      "sha256": "2418652416bf724c22d6ee9321ae2bd1840bbb1ebed02547d3e351c69eecdae1",
+      "bytes": 9292,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "2418652416bf724c22d6ee9321ae2bd1840bbb1ebed02547d3e351c69eecdae1"
+    },
+    {
+      "path": "tests/bot-objective-intel.test.ts",
+      "sha256": "ebb993d7a88f78a57fc6a467fc491ab66afe1c6299f245dcc513ef1e39b9e9e2",
+      "bytes": 8957,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ebb993d7a88f78a57fc6a467fc491ab66afe1c6299f245dcc513ef1e39b9e9e2"
+    },
+    {
+      "path": "tests/bot-penetration.test.ts",
+      "sha256": "9fd824b88cdbf84a4199c558677bcf2540fc79ee8c2c8e2c9fd86560dce4043a",
+      "bytes": 5860,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9fd824b88cdbf84a4199c558677bcf2540fc79ee8c2c8e2c9fd86560dce4043a"
+    },
+    {
+      "path": "tests/bot-perception.test.ts",
+      "sha256": "4e2cb31ef0d5ba2482d0c5eea8fea5e22bc213a3eb6c5386979cbae4c1762ebb",
+      "bytes": 2535,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4e2cb31ef0d5ba2482d0c5eea8fea5e22bc213a3eb6c5386979cbae4c1762ebb"
+    },
+    {
+      "path": "tests/bot-scope.test.ts",
+      "sha256": "9751cc7067fba62431f04329dc056b0b8633a67a1ed52a0a8e369ad7530dc0cf",
+      "bytes": 5419,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9751cc7067fba62431f04329dc056b0b8633a67a1ed52a0a8e369ad7530dc0cf"
+    },
+    {
+      "path": "tests/bot-shot-resolution.test.ts",
+      "sha256": "8ebc2b870611ab4e265603ed3f8418bbe5939ac78a9c86893355817b6a5edbe0",
+      "bytes": 6731,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8ebc2b870611ab4e265603ed3f8418bbe5939ac78a9c86893355817b6a5edbe0"
+    },
+    {
+      "path": "tests/bot-silencer.test.ts",
+      "sha256": "a697ce34b2c86c7a1060a34788f5472546277c81916e145930723f740049f5cf",
+      "bytes": 5172,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a697ce34b2c86c7a1060a34788f5472546277c81916e145930723f740049f5cf"
+    },
+    {
+      "path": "tests/bot-utility.test.ts",
+      "sha256": "1ef03555c81d6d3ee5546d14f115441ea5a588039c573937e8c6a02ac8dbbdd7",
+      "bytes": 8616,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1ef03555c81d6d3ee5546d14f115441ea5a588039c573937e8c6a02ac8dbbdd7"
+    },
+    {
+      "path": "tests/bot-weapon-actions.test.ts",
+      "sha256": "677836c1edc24bb0018bb13966145ddf4a028b6037df3da961448d2c6f807654",
+      "bytes": 4023,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "677836c1edc24bb0018bb13966145ddf4a028b6037df3da961448d2c6f807654"
+    },
+    {
+      "path": "tests/camera-presentation-contract.test.ts",
+      "sha256": "e66425f7392106403be8f861135f8a325fe3c88a1bb7271cd3a8e16cebe63bf9",
+      "bytes": 6933,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e66425f7392106403be8f861135f8a325fe3c88a1bb7271cd3a8e16cebe63bf9"
+    },
+    {
+      "path": "tests/casing-effects.test.ts",
+      "sha256": "9cfacad4f730697a30d0d20b2c9bf568437ee677ee6e7d25e45dd8ba6d125ef6",
+      "bytes": 3445,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9cfacad4f730697a30d0d20b2c9bf568437ee677ee6e7d25e45dd8ba6d125ef6"
+    },
+    {
+      "path": "tests/character-grip-matrix.test.ts",
+      "sha256": "5f5c7d72df27d7be1bda37de29ac7508846ceaea8251afc524e9c09445dcdf61",
+      "bytes": 1569,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5f5c7d72df27d7be1bda37de29ac7508846ceaea8251afc524e9c09445dcdf61"
+    },
+    {
+      "path": "tests/character-hand-contact.test.ts",
+      "sha256": "3ad6fcee3e9ede22a07e20cf726d470441aa8921c45a5f2d89a75de2a0d2d97d",
+      "bytes": 9848,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "3ad6fcee3e9ede22a07e20cf726d470441aa8921c45a5f2d89a75de2a0d2d97d"
+    },
+    {
+      "path": "tests/character-limb-deformation-integration.test.ts",
+      "sha256": "3d7ffb91f94bb9d0466fd8b6d9d8643cfa6a4b2ceedf2fa3ce47bf614da029d4",
+      "bytes": 2490,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "3d7ffb91f94bb9d0466fd8b6d9d8643cfa6a4b2ceedf2fa3ce47bf614da029d4"
+    },
+    {
+      "path": "tests/character-limb-deformation.test.ts",
+      "sha256": "c1550761d2949d2dd8983b3f71607160db0596211d9556b4b95dd66400eea344",
+      "bytes": 16322,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c1550761d2949d2dd8983b3f71607160db0596211d9556b4b95dd66400eea344"
+    },
+    {
+      "path": "tests/character-limb-normal-precision.test.ts",
+      "sha256": "71f4e534915a64688c8176251250919f2739b7d49f32f404d0d647edd4f50946",
+      "bytes": 1586,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "71f4e534915a64688c8176251250919f2739b7d49f32f404d0d647edd4f50946"
+    },
+    {
+      "path": "tests/character-rig.test.ts",
+      "sha256": "94dc8f8a576afc8960d406c957a43b7f4e88b28b54e8b6c1347194fab97487c1",
+      "bytes": 13753,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "94dc8f8a576afc8960d406c957a43b7f4e88b28b54e8b6c1347194fab97487c1"
+    },
+    {
+      "path": "tests/character-visuals.test.ts",
+      "sha256": "f015d6deeba60b6d3bdb79a807776f0b10ea4f6ea091dd328e7f0f8f85dfd655",
+      "bytes": 10913,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f015d6deeba60b6d3bdb79a807776f0b10ea4f6ea091dd328e7f0f8f85dfd655"
+    },
+    {
+      "path": "tests/classic-interaction-audio.test.ts",
+      "sha256": "cfffc588104a319cafe90db9c14156c01aa08d2fa60f42026af31558be77f4eb",
+      "bytes": 4170,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "cfffc588104a319cafe90db9c14156c01aa08d2fa60f42026af31558be77f4eb"
+    },
+    {
+      "path": "tests/classic-pilot.test.ts",
+      "sha256": "479518389b1c02f9c6213c4968b3c3440befd538bc41bf632cc3ec03809106c4",
+      "bytes": 4938,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "479518389b1c02f9c6213c4968b3c3440befd538bc41bf632cc3ec03809106c4"
+    },
+    {
+      "path": "tests/classic-surface-profile.test.ts",
+      "sha256": "aaceacb779b84c5694b80a718fcc9c4f2400a16ae46e79fc967a17672c08be1c",
+      "bytes": 13522,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "aaceacb779b84c5694b80a718fcc9c4f2400a16ae46e79fc967a17672c08be1c"
+    },
+    {
+      "path": "tests/classic-surface-relief.test.ts",
+      "sha256": "d9ea595dd5be2618a1001def27e970b95e6cc7f590d0f2fa94575ec494058524",
+      "bytes": 4464,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d9ea595dd5be2618a1001def27e970b95e6cc7f590d0f2fa94575ec494058524"
+    },
+    {
+      "path": "tests/combat-damage.test.ts",
+      "sha256": "eeb9d11a3ef74147da3d68d97392c28bbd0e62eca95c5c60fd343790038892d4",
+      "bytes": 2525,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "eeb9d11a3ef74147da3d68d97392c28bbd0e62eca95c5c60fd343790038892d4"
+    },
+    {
+      "path": "tests/combat-feedback.test.ts",
+      "sha256": "7f6dd9d156f06138163eac6c0eb04dacdc5ceaf074ef106dc9c57e7a600cf206",
+      "bytes": 3908,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "7f6dd9d156f06138163eac6c0eb04dacdc5ceaf074ef106dc9c57e7a600cf206"
+    },
+    {
+      "path": "tests/combat-visual-effects.test.ts",
+      "sha256": "e240dbd529d84fad59c46f8623dadace5539b116dcfe89dd5694171082f665f3",
+      "bytes": 6337,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e240dbd529d84fad59c46f8623dadace5539b116dcfe89dd5694171082f665f3"
+    },
+    {
+      "path": "tests/death-poses.test.ts",
+      "sha256": "5ac7b221995a855727112ff83483c114315dd832c642ec3c869f153f44d43a98",
+      "bytes": 11726,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5ac7b221995a855727112ff83483c114315dd832c642ec3c869f153f44d43a98"
+    },
+    {
+      "path": "tests/desert-props.test.ts",
+      "sha256": "163d502571c54e9a477ac60a19c8029c6e7f6899c44f1ee3affede93dc9040f4",
+      "bytes": 8226,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "163d502571c54e9a477ac60a19c8029c6e7f6899c44f1ee3affede93dc9040f4"
+    },
+    {
+      "path": "tests/dust2-map.test.ts",
+      "sha256": "50642d5cee30e36c3b97b5e71107383af03b55923278ea1caf8e87ac1c59a46d",
+      "bytes": 4609,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "50642d5cee30e36c3b97b5e71107383af03b55923278ea1caf8e87ac1c59a46d"
+    },
+    {
+      "path": "tests/environment-materials.test.ts",
+      "sha256": "3bd81b7654920872fa55527d32c2af31011a45674afe921c63f11e072dfa198d",
+      "bytes": 4529,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "3bd81b7654920872fa55527d32c2af31011a45674afe921c63f11e072dfa198d"
+    },
+    {
+      "path": "tests/fall-damage-page-contract.test.ts",
+      "sha256": "629a980700aef6baa752b65eb331eccf047eba4aa3dd6bab76e9a9c36f9d75c5",
+      "bytes": 3430,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "629a980700aef6baa752b65eb331eccf047eba4aa3dd6bab76e9a9c36f9d75c5"
+    },
+    {
+      "path": "tests/fall-damage.test.ts",
+      "sha256": "74e35228c4b7c81cc0152dceb8eae84babd324f2c0a5600bd2225e373dc10840",
+      "bytes": 6186,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "74e35228c4b7c81cc0152dceb8eae84babd324f2c0a5600bd2225e373dc10840"
+    },
+    {
+      "path": "tests/fixed-movement-clock.test.ts",
+      "sha256": "5d6c4312435a614168e517548fd7ff85064d459f9b0fb155d1b769d4354255cc",
+      "bytes": 1579,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5d6c4312435a614168e517548fd7ff85064d459f9b0fb155d1b769d4354255cc"
+    },
+    {
+      "path": "tests/game-rules.test.ts",
+      "sha256": "fe62a05a00eb4aef8f6f2ddf934338ffba878257f3eb8c98c85b6cf4e7342ce7",
+      "bytes": 117769,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fe62a05a00eb4aef8f6f2ddf934338ffba878257f3eb8c98c85b6cf4e7342ce7"
+    },
+    {
+      "path": "tests/graphics-budget-publication.test.ts",
+      "sha256": "89e455c4712d8439bd63b9269cd19c183f4ac98639da8f0b61f9e8ff62926349",
+      "bytes": 3189,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "89e455c4712d8439bd63b9269cd19c183f4ac98639da8f0b61f9e8ff62926349"
+    },
+    {
+      "path": "tests/graphics-budget.test.ts",
+      "sha256": "5de94926ab6e627c326c4320772aae3e53a019071dd3b4c66db9733102f776e2",
+      "bytes": 7224,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "5de94926ab6e627c326c4320772aae3e53a019071dd3b4c66db9733102f776e2"
+    },
+    {
+      "path": "tests/graphics-qa-placement.test.ts",
+      "sha256": "8c208548159f7888904734daf2c2fadfd7b85f57f3eb681209f42725fff3adce",
+      "bytes": 3106,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "8c208548159f7888904734daf2c2fadfd7b85f57f3eb681209f42725fff3adce"
+    },
+    {
+      "path": "tests/graphics-qa.test.ts",
+      "sha256": "e18405f0cad1dc74f760913c888e131b6ce4be881f1a720afd0865c3060ac765",
+      "bytes": 12899,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e18405f0cad1dc74f760913c888e131b6ce4be881f1a720afd0865c3060ac765"
+    },
+    {
+      "path": "tests/grenade-effects.test.ts",
+      "sha256": "69203510d12fb78cbc7dcdadfd251f6afc9eecf54ae4f05356bd57a5cc34cf68",
+      "bytes": 5859,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "69203510d12fb78cbc7dcdadfd251f6afc9eecf54ae4f05356bd57a5cc34cf68"
+    },
+    {
+      "path": "tests/jkh-130-movement-route.test.ts",
+      "sha256": "ce93e9ebacdcebecfc6c6323351ef6ad3d487837cf04ea8a79480dfc6adf614a",
+      "bytes": 5644,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "ce93e9ebacdcebecfc6c6323351ef6ad3d487837cf04ea8a79480dfc6adf614a"
+    },
+    {
+      "path": "tests/keyboard-playtest-input.test.ts",
+      "sha256": "40d69c915538c665f0c40177c23e5393c04e0752a52d6d4638e8f69bae668a9a",
+      "bytes": 3094,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "40d69c915538c665f0c40177c23e5393c04e0752a52d6d4638e8f69bae668a9a"
+    },
+    {
+      "path": "tests/live-skeleton-capture-lifecycle.test.ts",
+      "sha256": "bad19dff94c72ed8290d4215d75b2226b6fa64efb9b174ff4b64e72d2ea13f25",
+      "bytes": 980,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bad19dff94c72ed8290d4215d75b2226b6fa64efb9b174ff4b64e72d2ea13f25"
+    },
+    {
+      "path": "tests/live-skeleton-sampling-contract.test.ts",
+      "sha256": "a5919d4b1bbbe01aea89670db2c14b3b18344c609668c8487eff4a73c6dffc8a",
+      "bytes": 3393,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a5919d4b1bbbe01aea89670db2c14b3b18344c609668c8487eff4a73c6dffc8a"
+    },
+    {
+      "path": "tests/live-skinned-animation.test.ts",
+      "sha256": "91b21ed6001d118f7db1c8957b523a3e73678c66f60dee6d50151d20f6bc09f2",
+      "bytes": 3585,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "91b21ed6001d118f7db1c8957b523a3e73678c66f60dee6d50151d20f6bc09f2"
+    },
+    {
+      "path": "tests/local-playtest.test.ts",
+      "sha256": "75abece7c54f0248bd310f18492d17745287aeee186dc88eb8d3ceb916a136dd",
+      "bytes": 2059,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "75abece7c54f0248bd310f18492d17745287aeee186dc88eb8d3ceb916a136dd"
+    },
+    {
+      "path": "tests/match-lifecycle-qa.test.ts",
+      "sha256": "bade02c500bd1655bd63ec18c24e42188fad515cc01ac2159b0afceeb8409614",
+      "bytes": 2522,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bade02c500bd1655bd63ec18c24e42188fad515cc01ac2159b0afceeb8409614"
+    },
+    {
+      "path": "tests/movement-baseline-lock.test.ts",
+      "sha256": "16ca748f26f08d89c2d6933473b8a58cc83e33f8f0f780e86b94e146b782f924",
+      "bytes": 6615,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "16ca748f26f08d89c2d6933473b8a58cc83e33f8f0f780e86b94e146b782f924"
+    },
+    {
+      "path": "tests/movement-measurement.test.ts",
+      "sha256": "4e47936440ab7a4788ba23dbb945e164827d36e2a7ff1b09e928f3ced6e2834c",
+      "bytes": 1727,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "4e47936440ab7a4788ba23dbb945e164827d36e2a7ff1b09e928f3ced6e2834c"
+    },
+    {
+      "path": "tests/movement-page-contract.test.ts",
+      "sha256": "1c01ad4d2ad1d792bd126f237e373684dd9a61549e9f6553ddc50469566f8520",
+      "bytes": 8464,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "1c01ad4d2ad1d792bd126f237e373684dd9a61549e9f6553ddc50469566f8520"
+    },
+    {
+      "path": "tests/movement-presentation-invariants.test.ts",
+      "sha256": "84e53225bde5789fe6bca67629f0c2198a105be1f2bf5f0530ec1c1e1c14feb9",
+      "bytes": 7308,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "84e53225bde5789fe6bca67629f0c2198a105be1f2bf5f0530ec1c1e1c14feb9"
+    },
+    {
+      "path": "tests/movement-presentation-performance.test.ts",
+      "sha256": "23ec25232545b4b7fa6df1afef12a23b495429555d7d881ac13d096bb664bf9e",
+      "bytes": 16547,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "23ec25232545b4b7fa6df1afef12a23b495429555d7d881ac13d096bb664bf9e"
+    },
+    {
+      "path": "tests/native-character-visuals.test.ts",
+      "sha256": "02a081c075b14a0f394c7ecb41e6b07caff8101f79892e63e94e329b23a557fd",
+      "bytes": 9224,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "02a081c075b14a0f394c7ecb41e6b07caff8101f79892e63e94e329b23a557fd"
+    },
+    {
+      "path": "tests/objective-audio.test.ts",
+      "sha256": "43bcad4bf1d9eb6f163279c029ae45d1473e20a3436e084c3e398e757816d897",
+      "bytes": 2601,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "43bcad4bf1d9eb6f163279c029ae45d1473e20a3436e084c3e398e757816d897"
+    },
+    {
+      "path": "tests/opponent-reload-audio.test.ts",
+      "sha256": "fe8f3e5b7d399d0d10fe104c8f2c62d1132028e4c496bf8db49fef8f54b05803",
+      "bytes": 2573,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fe8f3e5b7d399d0d10fe104c8f2c62d1132028e4c496bf8db49fef8f54b05803"
+    },
+    {
+      "path": "tests/perimeter-masonry-detail.test.ts",
+      "sha256": "47b12f8f14df474674de216880a7795f68c733d69a09784ed7415c66906e85d2",
+      "bytes": 2169,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "47b12f8f14df474674de216880a7795f68c733d69a09784ed7415c66906e85d2"
+    },
+    {
+      "path": "tests/player-collision.test.ts",
+      "sha256": "c9d922ce15cdb2afdccef797c3324618d51c962fd4a9a1da11b9ba60dd02525e",
+      "bytes": 7315,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c9d922ce15cdb2afdccef797c3324618d51c962fd4a9a1da11b9ba60dd02525e"
+    },
+    {
+      "path": "tests/player-death-camera.test.ts",
+      "sha256": "118f378c8fb5740ff2f9ae5c2375bd3392cdf17be73749c46f35409eb2a2f8dc",
+      "bytes": 3172,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "118f378c8fb5740ff2f9ae5c2375bd3392cdf17be73749c46f35409eb2a2f8dc"
+    },
+    {
+      "path": "tests/player-input.test.ts",
+      "sha256": "c7d2edef772384c20b82b16c9ed6670d0e8f61d8e7f3d53d59e37f264f62ed1c",
+      "bytes": 4612,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c7d2edef772384c20b82b16c9ed6670d0e8f61d8e7f3d53d59e37f264f62ed1c"
+    },
+    {
+      "path": "tests/player-locomotion.test.ts",
+      "sha256": "d6d6a40a4c936b1e81454af080f0a00662e820912fd15cf767d7d7f0e370d23b",
+      "bytes": 6962,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d6d6a40a4c936b1e81454af080f0a00662e820912fd15cf767d7d7f0e370d23b"
+    },
+    {
+      "path": "tests/player-physics.test.ts",
+      "sha256": "c60474ea0261048f3644575f4ca59e62221fc7e9466e2ff784bc35547ec65dca",
+      "bytes": 5282,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c60474ea0261048f3644575f4ca59e62221fc7e9466e2ff784bc35547ec65dca"
+    },
+    {
+      "path": "tests/player-presentation.test.ts",
+      "sha256": "9d5069aa74767c9c61a582350f53cdab59c1e4db8abce4099c755beca9ca7d01",
+      "bytes": 7523,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9d5069aa74767c9c61a582350f53cdab59c1e4db8abce4099c755beca9ca7d01"
+    },
+    {
+      "path": "tests/primary-weapon-models.test.ts",
+      "sha256": "bbd61532a61b3b5c84367ad0bbde349320cf777e8d32fc7bd64c7bcd950450a3",
+      "bytes": 13178,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "bbd61532a61b3b5c84367ad0bbde349320cf777e8d32fc7bd64c7bcd950450a3"
+    },
+    {
+      "path": "tests/render-quality.test.ts",
+      "sha256": "595617b97c4289fa1ad03d4b6f10aa0b64e7058231b446e47d6edea03f11cbb9",
+      "bytes": 2921,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "595617b97c4289fa1ad03d4b6f10aa0b64e7058231b446e47d6edea03f11cbb9"
+    },
+    {
+      "path": "tests/round-result-receipt.test.ts",
+      "sha256": "fefda1b2eb64cb93cca3ae568fa87686e13280d27eb4c978c5463e2b6fb41971",
+      "bytes": 3441,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fefda1b2eb64cb93cca3ae568fa87686e13280d27eb4c978c5463e2b6fb41971"
+    },
+    {
+      "path": "tests/scene-layout.test.ts",
+      "sha256": "f7244be30e5f351a0a38f6514cfe1f1f9dd0d94990ccb755a743438078708ef1",
+      "bytes": 4526,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f7244be30e5f351a0a38f6514cfe1f1f9dd0d94990ccb755a743438078708ef1"
+    },
+    {
+      "path": "tests/secondary-weapon-models.test.ts",
+      "sha256": "a7c9e49ed8d4bf98c9f7a280694cb0ceabcbdda83c40962fd1ea0bddbf6093e6",
+      "bytes": 27503,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "a7c9e49ed8d4bf98c9f7a280694cb0ceabcbdda83c40962fd1ea0bddbf6093e6"
+    },
+    {
+      "path": "tests/simulation-clock.test.ts",
+      "sha256": "f52e8257a841b00b3c07cc072d1d53f71cb03d23e46d43021af0fa9fcb1a261f",
+      "bytes": 5439,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "f52e8257a841b00b3c07cc072d1d53f71cb03d23e46d43021af0fa9fcb1a261f"
+    },
+    {
+      "path": "tests/skinned-character-visuals.test.ts",
+      "sha256": "0b194c0656d75bdc4a427a0b07e13a7874dd9793c099531807e6da05cf50d385",
+      "bytes": 36732,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "0b194c0656d75bdc4a427a0b07e13a7874dd9793c099531807e6da05cf50d385"
+    },
+    {
+      "path": "tests/skip-bot-round.test.ts",
+      "sha256": "079609ab01b4cf85265df89ec5f7ebc5ec58217f9380a0af2e89c551cd08264a",
+      "bytes": 4390,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "079609ab01b4cf85265df89ec5f7ebc5ec58217f9380a0af2e89c551cd08264a"
+    },
+    {
+      "path": "tests/spectator-camera.test.ts",
+      "sha256": "6fd596fa61dc4ebbaa50c46df5baed30c735a7b1795adedec12ded17f3bd3099",
+      "bytes": 4547,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6fd596fa61dc4ebbaa50c46df5baed30c735a7b1795adedec12ded17f3bd3099"
+    },
+    {
+      "path": "tests/static-visual-batching.test.ts",
+      "sha256": "44f7b87d1db1ff1eb5a358e7f758ec7f0eb2d1835b4172440050cb33857b6a16",
+      "bytes": 5723,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "44f7b87d1db1ff1eb5a358e7f758ec7f0eb2d1835b4172440050cb33857b6a16"
+    },
+    {
+      "path": "tests/surface-marks.test.ts",
+      "sha256": "98284e2d655b8d5c7658221274e33873406e9f992a8463a8c4d14c0426a1f056",
+      "bytes": 2994,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "98284e2d655b8d5c7658221274e33873406e9f992a8463a8c4d14c0426a1f056"
+    },
+    {
+      "path": "tests/team-population.test.ts",
+      "sha256": "985a06e9b86ff482057c8ea110209834199214e7b2002d487a5d4e608c12e624",
+      "bytes": 2339,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "985a06e9b86ff482057c8ea110209834199214e7b2002d487a5d4e608c12e624"
+    },
+    {
+      "path": "tests/travel-surface-detail.test.ts",
+      "sha256": "fc2ace2a1033103a1a33e07400e4584db753a840e4ca0dd5342f7aab41306232",
+      "bytes": 3665,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "fc2ace2a1033103a1a33e07400e4584db753a840e4ca0dd5342f7aab41306232"
+    },
+    {
+      "path": "tests/validate-gltf-cli.test.ts",
+      "sha256": "caa5989fc7efa07bc54c0fd57cdc969782d35d2628d4634e826eeacc8bc8878d",
+      "bytes": 2009,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "caa5989fc7efa07bc54c0fd57cdc969782d35d2628d4634e826eeacc8bc8878d"
+    },
+    {
+      "path": "tests/viewmodel-reload-visuals.test.ts",
+      "sha256": "9c8241ac3b7d8bb4a18bc6da819a6b014ac9d5833005661bd426b6058f6197c9",
+      "bytes": 21298,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9c8241ac3b7d8bb4a18bc6da819a6b014ac9d5833005661bd426b6058f6197c9"
+    },
+    {
+      "path": "tests/viewmodel-render-pass.test.ts",
+      "sha256": "60e0e9c53c5f737c5d0bec75e6d3ffd31a401a7a91ef89e1ce5519f1273c225d",
+      "bytes": 5329,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "60e0e9c53c5f737c5d0bec75e6d3ffd31a401a7a91ef89e1ce5519f1273c225d"
+    },
+    {
+      "path": "tests/viewmodel-visuals.test.ts",
+      "sha256": "2dd6f5b93e52497868e40f818c26ebdcee2e9d446c1579e420e340b1054ba4de",
+      "bytes": 46930,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "2dd6f5b93e52497868e40f818c26ebdcee2e9d446c1579e420e340b1054ba4de"
+    },
+    {
+      "path": "tests/visual-comparison.test.ts",
+      "sha256": "95b96df08efe53a11d13dd90406af64c6bf1863e286303c4e77d8527c5ed71db",
+      "bytes": 11238,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "95b96df08efe53a11d13dd90406af64c6bf1863e286303c4e77d8527c5ed71db"
+    },
+    {
+      "path": "tests/visual-toolkit.test.ts",
+      "sha256": "60b3e7fca639367c5f9e484c62bafb8581d84356a4ab5eb212bd572d0a970ed1",
+      "bytes": 3848,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "60b3e7fca639367c5f9e484c62bafb8581d84356a4ab5eb212bd572d0a970ed1"
+    },
+    {
+      "path": "tests/weapon-ballistics.test.ts",
+      "sha256": "e51d68199f4e459a2271de6c4da8b25e1b4e4d94c7e6abe4f491e3d80538b1e6",
+      "bytes": 7043,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "e51d68199f4e459a2271de6c4da8b25e1b4e4d94c7e6abe4f491e3d80538b1e6"
+    },
+    {
+      "path": "tests/weapon-penetration.test.ts",
+      "sha256": "22463aed304a322bc02bdfef3098399180a68f1159e1ea4b2fdfd44e2478b3b2",
+      "bytes": 3977,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "22463aed304a322bc02bdfef3098399180a68f1159e1ea4b2fdfd44e2478b3b2"
+    },
+    {
+      "path": "tests/weapon-reference.test.ts",
+      "sha256": "eced86026cc70715ca653924cd9a6d931505e5879969e7d9af46789a0df9b050",
+      "bytes": 2992,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "eced86026cc70715ca653924cd9a6d931505e5879969e7d9af46789a0df9b050"
+    },
+    {
+      "path": "tests/weapon-special-actions.test.ts",
+      "sha256": "b6dd75155e57c7e1e8b01d6a03b775b15d4d77cd2bb21a91b6576b30979af9f9",
+      "bytes": 6646,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b6dd75155e57c7e1e8b01d6a03b775b15d4d77cd2bb21a91b6576b30979af9f9"
+    },
+    {
+      "path": "tests/weapon-surface-materials.test.ts",
+      "sha256": "b0dca22341a94eb54aa1aab815ef35a2763f369cda80fc3c6fe33406ea9e5462",
+      "bytes": 2262,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "b0dca22341a94eb54aa1aab815ef35a2763f369cda80fc3c6fe33406ea9e5462"
+    },
+    {
+      "path": "tests/weapon-surface-profile.test.ts",
+      "sha256": "05682f994472359c37ed9779d60ad4eac7d79902e70eb02ffa110d57ec7e144c",
+      "bytes": 4871,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "05682f994472359c37ed9779d60ad4eac7d79902e70eb02ffa110d57ec7e144c"
+    },
+    {
+      "path": "tests/world-firearm-batching.test.ts",
+      "sha256": "761ffc4d4338eb14220b79c35547b7cae7b98f6f00ac8726e39ef937707f77fd",
+      "bytes": 6662,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "761ffc4d4338eb14220b79c35547b7cae7b98f6f00ac8726e39ef937707f77fd"
+    },
+    {
+      "path": "tsconfig.check.json",
+      "sha256": "35bf9c91cea1d1ffff15d12e3a2010c8959c5542787209e09c45cb0a5f0e0784",
+      "bytes": 258,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "35bf9c91cea1d1ffff15d12e3a2010c8959c5542787209e09c45cb0a5f0e0784"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "6c52b3cb64d685c55efd5e037c9bacfadd3b76e56cf1cd64e325064dd1de3302",
+      "bytes": 711,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "6c52b3cb64d685c55efd5e037c9bacfadd3b76e56cf1cd64e325064dd1de3302"
+    },
+    {
+      "path": "visual-tools/README.md",
+      "sha256": "cfec6351425e39ff7f3037e73775a3b4363b4d250eeb6e9fbe1fadcb77b5ca0d",
+      "bytes": 9769,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "cfec6351425e39ff7f3037e73775a3b4363b4d250eeb6e9fbe1fadcb77b5ca0d"
+    },
+    {
+      "path": "visual-tools/install.json",
+      "sha256": "90361b58d38a4166ba16fd1ecd9068550a44f809227d84ecea4daf7b2390a037",
+      "bytes": 321,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "90361b58d38a4166ba16fd1ecd9068550a44f809227d84ecea4daf7b2390a037"
+    },
+    {
+      "path": "visual-tools/kuptchi-actions.json",
+      "sha256": "d319d3b55744684d78c0a9a6497ba6055ad7f546389a85394b7992f236ad995e",
+      "bytes": 327,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "d319d3b55744684d78c0a9a6497ba6055ad7f546389a85394b7992f236ad995e"
+    },
+    {
+      "path": "visual-tools/kuptchi-textures.json",
+      "sha256": "c7a8a70fb6acaa6ee83709987132e957e2ba990446c209276176cf6765159943",
+      "bytes": 194,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "c7a8a70fb6acaa6ee83709987132e957e2ba990446c209276176cf6765159943"
+    },
+    {
+      "path": "visual-tools/reference-library.json",
+      "sha256": "96e4dedd3eebb96bbd27cba5abe5a03809419f459e287a22c9134130915f5e82",
+      "bytes": 3922,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "96e4dedd3eebb96bbd27cba5abe5a03809419f459e287a22c9134130915f5e82"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "9cce35789c01783a61a1fb665219723df045569887c62bad68268cc7de5611ba",
+      "bytes": 3114,
+      "mode": 436,
+      "decision": "copy",
+      "sourceGitMode": "100644",
+      "candidateSha256": "9cce35789c01783a61a1fb665219723df045569887c62bad68268cc7de5611ba"
+    }
+  ],
+  "modeExplanation": "mode is the original archive permission integer; sourceGitMode is the authoritative executable bit tracked by Git.",
+  "destinationBase": "b15c1a9f329edd000fe7cec7f3fc5ed220f19ec4",
+  "publication": "Local snapshot only; original history and refs excluded; raw asset publication remains unauthorized.",
+  "sourceRepositoryPathBase": "kept repository root"
+}

@@ -1,0 +1,6 @@
+{
+  "Idle": {"Arms_Armature": "Arms_BasePose", "Rifle_01_Armature": "Rifle_Breathing"},
+  "Fire": {"Arms_Armature": "Arms_Fire", "Rifle_01_Armature": "Rifle_Fire"},
+  "Reload": {"Arms_Armature": "Arms_Reload", "Rifle_01_Armature": "Rifle_Reload"},
+  "Equip": {"Arms_Armature": "Arms_Draw", "Rifle_01_Armature": "Rifle_Draw"}
+}

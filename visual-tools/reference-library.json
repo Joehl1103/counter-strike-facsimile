@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Local visual-reference ledger. Entries are provenance records, not fidelity or approval claims.",
+  "assetRoot": "..",
+  "entries": [
+    {
+      "id": "user-ak-viewmodel-still",
+      "localPath": "outputs/hands-qa/references/user-ak-reference.webp",
+      "kind": "user-supplied visual still",
+      "provenance": "CS16_REFERENCE.md, available material inspected 2026-09-13",
+      "licenseStatus": "User-supplied; redistribution permission not recorded",
+      "use": "Composition reference only; build and settings unknown",
+      "approval": "unreviewed"
+    },
+    {
+      "id": "user-m4-viewmodel-still-1",
+      "localPath": "outputs/hands-qa/references/user-m4-reference-1.jpeg",
+      "kind": "user-supplied visual still",
+      "provenance": "CS16_REFERENCE.md, available material inspected 2026-09-13",
+      "licenseStatus": "User-supplied; redistribution permission not recorded",
+      "use": "Composition reference only; build and settings unknown",
+      "approval": "unreviewed"
+    },
+    {
+      "id": "local-counterstrike-composition-still",
+      "localPath": "outputs/graphics-review/reference/counterstrike-reference.jpg",
+      "kind": "local visual still",
+      "provenance": "CS16_REFERENCE.md, available material inspected 2026-09-13",
+      "licenseStatus": "Original provenance and redistribution permission not established",
+      "use": "Broad composition only; not a mechanics reference",
+      "approval": "unreviewed"
+    },
+    {
+      "id": "rejected-r0-ak-control-4x3",
+      "localPath": "outputs/cs16/recovery/r0/rejected-ak-4x3.jpg",
+      "kind": "project capture control",
+      "provenance": "CODEX_PLAN_VISUAL_RECOVERY.md R0; rejected P7 candidate control",
+      "licenseStatus": "Project-produced capture; source asset terms remain separate",
+      "use": "Comparison control only; not an accepted target",
+      "approval": "rejected",
+      "reason": "User-rejected P7 first-person presentation."
+    },
+    {
+      "id": "reused-ak-pilot",
+      "localPath": "public/assets/viewmodels/ak47.glb",
+      "kind": "local source asset",
+      "provenance": "public/assets/viewmodels/SOURCE.md",
+      "licenseStatus": "Stein Games Classic Weapons Pack v1.1 CC0-1.0; WRAD arms commit f3987244176c33d2c20d4f9e139980af12684d87 CC0-1.0",
+      "use": "In-development pilot; needs actual-renderer comparison",
+      "approval": "unreviewed"
+    },
+    {
+      "id": "reused-m4-pilot",
+      "localPath": "public/assets/viewmodels/m4a1.glb",
+      "kind": "local source asset",
+      "provenance": "public/assets/viewmodels/M4_SOURCE.md",
+      "licenseStatus": "Kuptchi RetroWeaponPack custom permission: personal and commercial use, no required attribution, no asset resale; source terms retained",
+      "use": "Served modern M4 and authored arms/animation control; classic adaptation remains offline and unqualified",
+      "approval": "unreviewed"
+    },
+    {
+      "id": "vanguard-character-control",
+      "localPath": "public/assets/characters/vanguard.glb",
+      "kind": "local source asset",
+      "provenance": "public/assets/characters/SOURCE.md",
+      "licenseStatus": "Three.js sample license and Mixamo usage guidance recorded in source note",
+      "use": "Historical character control; not a finished target",
+      "approval": "unreviewed"
+    },
+    {
+      "id": "ct-mpfb-pilot",
+      "localPath": "public/assets/characters/ct-mpfb.glb",
+      "kind": "local source asset",
+      "provenance": "public/assets/characters/CT_SOURCE.md",
+      "licenseStatus": "Mixed CC0 and CC-BY sources; current Margaret Toigo/MRT gloves and boots are CC0. Gas-mask catalog/file metadata conflict remains recorded with named attribution and pack terms in CT_SOURCE.md",
+      "use": "Served MPFB character qualification pilot; support-hand grip and final visual acceptance remain unresolved",
+      "approval": "unreviewed"
+    }
+  ]
+}
