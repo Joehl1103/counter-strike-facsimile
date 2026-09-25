@@ -22,6 +22,10 @@ import { createBotShotState, getBotAimCone, intersectPlayerShot, nearestShotImpa
 import { createBotUtilityState, cancelBotUtility, stepBotUtility, canInsertUtility, consumeInsertedUtility, getBotUtilityVelocity, GRENADE_FUSE_SECONDS, GRENADE_GRAVITY, BOT_UTILITY_WINDUP_SECONDS, type BotUtilityState, type UtilityKind, type UtilityPosition } from './bot-utility';
 
 import { tracePenetratingBullet, getPenetrationMaterial } from './weapon-penetration';
+import {
+  FIREARM_RUNTIME_FIXTURE_SEED,
+  getFirearmRuntimeFixture,
+} from './firearm-runtime-fixture';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import * as THREE from 'three';
@@ -968,6 +972,7 @@ export default function Home() {
     useState(false);
   const [graphicsBudgetSnapshot, setGraphicsBudgetSnapshot] = useState('');
   const [frameProfileSnapshot, setFrameProfileSnapshot] = useState('');
+  const [firearmRuntimeReceipt, setFirearmRuntimeReceipt] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1083,6 +1088,16 @@ export default function Home() {
         window.location.hostname === '127.0.0.1') &&
       new URLSearchParams(window.location.search).get('keyboard-playtest') ===
         '1';
+    const firearmRuntimeFixture = getFirearmRuntimeFixture(
+      window.location.search,
+      window.location.hostname,
+    );
+    // A fixture seed affects only this explicit localhost route. Keeping it
+    // next to construction makes the observed receipt seed match the random
+    // sources that actually resolve the shot.
+    const firearmRuntimeSeed = firearmRuntimeFixture
+      ? FIREARM_RUNTIME_FIXTURE_SEED
+      : 1601;
 
     const startingPlayerSide = getLocalPlaytestSide(window.location.search, window.location.hostname);
     const frameProfiler = isLocalFrameProfileEnabled(window.location.search, window.location.hostname)
@@ -3994,6 +4009,7 @@ export default function Home() {
     };
     const combatOccluders: THREE.Object3D[] = [...obstacleMeshes, ...hitMeshes];
     const shotSurfaceMeshes: THREE.Object3D[] = [...obstacleMeshes, ground];
+    let firearmRuntimeFixtureSurfaces: THREE.Mesh[] = [];
 
     const keys = new Set<string>();
     let keyboardPlaytestTapLatches = createKeyboardPlaytestTapLatches();
@@ -4006,8 +4022,8 @@ export default function Home() {
     const playerMovement = createPlayerMovement();
     const playerInput = createPlayerInputTimeline();
     const weaponSpecial = createWeaponSpecialActions();
-    const weaponBallistics = createWeaponBallistics(1601);
-    let spreadRandom = createSeededRandom(1602);
+    const weaponBallistics = createWeaponBallistics(firearmRuntimeSeed);
+    let spreadRandom = createSeededRandom(firearmRuntimeSeed + 1);
     const silencerVisuals = (['usp', 'carbine'] as const).map(kind => {
       const view = weaponViews[kind];
       const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.27, 10),
@@ -4072,6 +4088,14 @@ export default function Home() {
       smokes: 0,
       flashes: 0,
     };
+    let firearmRuntimeFixtureTarget: Enemy | null = null;
+    let firearmRuntimeFixtureTargetTransform: {
+      position: THREE.Vector3;
+      yaw: number;
+    } | null = null;
+    let firearmRuntimeFixtureSetup = false;
+    let firearmRuntimeActionSequence = 0;
+    const firearmRuntimeEvents: unknown[] = [];
     let playerPresentationState: PlayerPresentationState =
       createPlayerPresentationState(
         player.yaw,
@@ -5964,10 +5988,90 @@ export default function Home() {
       publishHud(0);
     };
 
+    const recordFirearmRuntimeEvent = (
+      input: string,
+      outcome: 'setup' | 'queued' | 'committed' | 'rejected',
+      details: Readonly<Record<string, unknown>> = {},
+    ) => {
+      if (!firearmRuntimeFixture) {
+        return;
+      }
+      const activeWeapon = player.activeWeapon;
+      const activeAmmo = isFirearmKind(activeWeapon)
+        ? player.ammo[activeWeapon]
+        : null;
+      const target = firearmRuntimeFixtureTarget;
+      const special = weaponSpecial.snapshot();
+      const pose = getBallisticPose();
+      const receipt = Object.freeze({
+        schemaVersion: 1,
+        buildIdentity: JKH129_BUILD_IDENTITY,
+        fixture: Object.freeze({
+          ...firearmRuntimeFixture,
+          caseId: firearmRuntimeFixture.id,
+          seedRequested: FIREARM_RUNTIME_FIXTURE_SEED,
+          seedObserved: firearmRuntimeSeed,
+          setupComplete: firearmRuntimeFixtureSetup,
+        }),
+        viewport: Object.freeze({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          quality: engineSettingsRef.current.quality,
+          fixedStepMs: 10,
+        }),
+        event: Object.freeze({
+          sequence: ++firearmRuntimeActionSequence,
+          input,
+          outcome,
+          simulationNowMs,
+        }),
+        player: Object.freeze({
+          activeWeapon,
+          ammo: activeAmmo && Object.freeze({ ...activeAmmo }),
+          equipReadyAtMs: player.equipReadyAtMs,
+          reload: player.reload && Object.freeze({
+            weapon: player.reload.weapon,
+            phase: player.reload.shotgunPhase ?? 'magazine',
+            deadlineMs: player.reload.completesAt,
+          }),
+          pose: Object.freeze(pose),
+          ballistic: isFirearmKind(activeWeapon)
+            ? Object.freeze(weaponBallistics.snapshot(activeWeapon))
+            : null,
+          special: Object.freeze(special),
+        }),
+        target: target && Object.freeze({
+          id: `${target.team}:${target.id}`,
+          position: Object.freeze(target.root.position.toArray()),
+          health: target.health,
+          armor: target.armor,
+          helmet: target.helmet,
+          alive: target.alive,
+        }),
+        details: Object.freeze(details),
+      });
+      firearmRuntimeEvents.push(receipt);
+      // The fixture is finite, but keep the read-only receipt bounded if a
+      // browser holds an automatic fire key longer than a verification case.
+      if (firearmRuntimeEvents.length > 128) {
+        firearmRuntimeEvents.shift();
+      }
+      setFirearmRuntimeReceipt(JSON.stringify(Object.freeze({
+        latest: receipt,
+        events: firearmRuntimeEvents,
+      }), null, 2));
+    };
+
     const queueGameplayAction = (action: GameplayAction) => {
       if (status !== 'active' || !playerAlive ||
-        !(document.pointerLockElement === renderer.domElement || touchPlaying)) return;
+        !(document.pointerLockElement === renderer.domElement || touchPlaying)) {
+        recordFirearmRuntimeEvent(action, 'rejected', {
+          reason: 'queue-precondition',
+        });
+        return;
+      }
       gameplayActions.enqueue(action, movementEventTime());
+      recordFirearmRuntimeEvent(action, 'queued');
     };
     const toggleScope = () => queueGameplayAction('secondary');
     const beginReload = () => queueGameplayAction('reload');
@@ -5975,14 +6079,21 @@ export default function Home() {
     const commitSecondary = () => {
       if (!playerAlive || status !== 'active' || simulationNowMs < freezeEnds ||
         !(document.pointerLockElement === renderer.domElement || touchPlaying) ||
-        buyMenuOpen || player.reload || !isWeaponReady(simulationNowMs, player.equipReadyAtMs)) return;
+        buyMenuOpen || player.reload || !isWeaponReady(simulationNowMs, player.equipReadyAtMs)) {
+        recordFirearmRuntimeEvent('KeyV', 'rejected', { reason: 'secondary-precondition' });
+        return;
+      }
       if (player.activeWeapon === 'knife') { shoot(false, true); return; }
-      if (!weaponSpecial.secondary(player.activeWeapon, simulationNowMs)) return;
+      if (!weaponSpecial.secondary(player.activeWeapon, simulationNowMs)) {
+        recordFirearmRuntimeEvent('KeyV', 'rejected', { reason: 'secondary-not-supported-or-locked' });
+        return;
+      }
       const state = weaponSpecial.snapshot();
       syncSilencerVisuals();
       if (player.activeWeapon === 'sniper') setScope(state.zoom !== 0);
       else if (player.activeWeapon === 'glock18') message = state.burst ? 'BURST-FIRE MODE' : 'SEMI-AUTOMATIC MODE';
       else message = weaponSpecial.isSilenced(player.activeWeapon) ? 'ATTACHING SILENCER' : 'REMOVING SILENCER';
+      recordFirearmRuntimeEvent('KeyV', 'committed');
       publishHud(0);
     };
 
@@ -6363,6 +6474,20 @@ export default function Home() {
     const resetRound = (newMatch = false) => {
       simulationClock.resetDebt();
       gameplayActions.clear();
+      firearmRuntimeFixtureSurfaces.forEach((surface) => {
+        scene.remove(surface);
+        colliderBoxesByMesh.delete(surface);
+        const surfaceIndex = shotSurfaceMeshes.indexOf(surface);
+        if (surfaceIndex >= 0) {
+          shotSurfaceMeshes.splice(surfaceIndex, 1);
+        }
+        surface.geometry.dispose();
+        (surface.material as THREE.Material).dispose();
+      });
+      firearmRuntimeFixtureSurfaces = [];
+      firearmRuntimeFixtureTarget = null;
+      firearmRuntimeFixtureTargetTransform = null;
+      firearmRuntimeFixtureSetup = false;
       fallLandingCounts.clear();
       fallDamageReceipts = [];
       controlledFallFixture = null;
@@ -6466,7 +6591,7 @@ export default function Home() {
       player.damageSuppression = 0;
       player.damageTag = 0;
       weaponBallistics.reset();
-      spreadRandom = createSeededRandom(1602);
+      spreadRandom = createSeededRandom(firearmRuntimeSeed + 1);
       player.shotPulse = 0;
       player.shotSide = 0;
       player.verticalVelocity = 0;
@@ -6746,8 +6871,129 @@ export default function Home() {
       camera.position.copy(player.position);
       camera.rotation.set(0, player.yaw, 0);
       syncPresentationCamera();
+      applyFirearmRuntimeFixture();
       lastHudUpdate = 0;
       publishHud();
+    };
+
+    const applyFirearmRuntimeFixture = () => {
+      if (!firearmRuntimeFixture) {
+        return;
+      }
+      const fixture = firearmRuntimeFixture;
+      const definition = FIREARMS[fixture.weapon];
+      const target = enemies[0];
+      if (!target) {
+        throw new Error('JKH-131 range target is unavailable');
+      }
+
+      // Setup is intentionally finite and separate from user action. It puts
+      // the requested firearm in inventory while leaving the knife selected so
+      // the driver must use Digit1 or Digit2 to generate an equip receipt.
+      player.primaryWeapon = isPrimaryWeaponKind(fixture.weapon)
+        ? fixture.weapon
+        : null;
+      player.secondaryWeapon = isSecondaryWeaponKind(fixture.weapon)
+        ? fixture.weapon
+        : null;
+      player.ammo[fixture.weapon] = {
+        magazine: definition.magazineSize,
+        reserve: definition.maxReserve,
+      };
+      player.activeWeapon = 'knife';
+      player.equipReadyAtMs = simulationNowMs;
+      player.nextShot = simulationNowMs;
+      player.reload = null;
+      player.scoped = false;
+      weaponSpecial.reset();
+      weaponBallistics.reset();
+      spreadRandom = createSeededRandom(firearmRuntimeSeed + 1);
+      showWeaponView('knife');
+
+      const requestedDistance = fixture.targetDistance === 'nearest-safe'
+        ? 3
+        : fixture.targetDistance;
+      const direction = new THREE.Vector3(0, 0, -1).applyAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        player.yaw,
+      );
+      const targetX = player.position.x + direction.x * requestedDistance;
+      const targetZ = player.position.z + direction.z * requestedDistance;
+      target.root.position.set(
+        targetX,
+        getMapGroundHeight(targetX, targetZ),
+        targetZ,
+      );
+      target.root.rotation.y = player.yaw + Math.PI;
+      target.bodyYaw = target.root.rotation.y;
+      target.aimYaw = target.root.rotation.y;
+      target.route = [new THREE.Vector2(targetX, targetZ)];
+      target.movementDecisionTimer = Number.POSITIVE_INFINITY;
+      target.fireCooldown = Number.POSITIVE_INFINITY;
+      target.health = 100;
+      target.armor = fixture.armor === 'none' ? 0 : 100;
+      target.helmet = fixture.armor === 'helmet';
+      target.alive = true;
+      // The fixture owns one named range target. Other actors are removed
+      // during controlled setup so their autonomous combat cannot damage or
+      // move that target before the player's ordinary input commits.
+      bots.forEach((bot) => {
+        if (bot === target) {
+          return;
+        }
+        bot.alive = false;
+        bot.root.visible = false;
+        bot.skinned.visualRoot.visible = false;
+      });
+      target.root.updateMatrixWorld(true);
+
+      const requestedHitMesh = target.hitMeshes.find(
+        (mesh) => mesh.userData.hitGroup === fixture.hitGroup,
+      );
+      if (!requestedHitMesh) {
+        throw new Error(`JKH-131 target has no ${fixture.hitGroup} hit mesh`);
+      }
+      const aimPoint = requestedHitMesh.getWorldPosition(new THREE.Vector3());
+      camera.position.copy(player.position);
+      camera.lookAt(aimPoint);
+      player.yaw = camera.rotation.y;
+      player.pitch = camera.rotation.x;
+      applyPlayerAim();
+
+      for (let wallIndex = 0; wallIndex < fixture.wallCount; wallIndex += 1) {
+        const thickness = fixture.material === 'concrete' ? 0.3
+          : fixture.material === 'blocked' ? 1 : 0.2;
+        const materialKind = fixture.material === 'blocked' ? 'concrete' : fixture.material;
+        const surface = new THREE.Mesh(
+          new THREE.BoxGeometry(2.4, 2.4, thickness),
+          new THREE.MeshBasicMaterial({ color: 0x444444 }),
+        );
+        surface.name = `jkh-131-${fixture.material}-slab-${wallIndex + 1}`;
+        surface.userData.surfaceImpactKind = materialKind;
+        const wallDistance = requestedDistance * (wallIndex + 1) / (fixture.wallCount + 1);
+        surface.position.copy(player.position).addScaledVector(direction, wallDistance);
+        surface.position.y = aimPoint.y;
+        scene.add(surface);
+        surface.updateMatrixWorld(true);
+        shotSurfaceMeshes.push(surface);
+        colliderBoxesByMesh.set(surface, new THREE.Box3().setFromObject(surface));
+        firearmRuntimeFixtureSurfaces.push(surface);
+      }
+
+      firearmRuntimeFixtureTarget = target;
+      firearmRuntimeFixtureTargetTransform = {
+        position: target.root.position.clone(),
+        yaw: target.root.rotation.y,
+      };
+      firearmRuntimeFixtureSetup = true;
+      recordFirearmRuntimeEvent('controlled-setup', 'setup', {
+        setupKind: 'finite-loadout-and-static-range-target',
+        requestedDistance: fixture.targetDistance,
+        requestedHitGroup: fixture.hitGroup,
+        requestedArmor: fixture.armor,
+        requestedMaterial: fixture.material,
+        wallColliders: firearmRuntimeFixtureSurfaces.map((surface) => surface.name),
+      });
     };
     restartRef.current = (newMatch, snapshotReason = 'play-start') => {
       if (status !== 'active') {
@@ -7120,7 +7366,10 @@ export default function Home() {
     };
 
     const commitReload = () => {
-      if (!isFirearmKind(player.activeWeapon)) return;
+      if (!isFirearmKind(player.activeWeapon)) {
+        recordFirearmRuntimeEvent('KeyR', 'rejected', { reason: 'non-firearm-active' });
+        return;
+      }
       const definition = FIREARMS[player.activeWeapon];
       const ammo = player.ammo[player.activeWeapon];
       if (
@@ -7133,8 +7382,10 @@ export default function Home() {
           ammo,
           magazineSize: definition.magazineSize,
         })
-      )
+      ) {
+        recordFirearmRuntimeEvent('KeyR', 'rejected', { reason: 'reload-precondition' });
         return;
+      }
       interruptPlayerPlant();
       weaponSpecial.cancelPending(simulationNowMs);
       syncSilencerVisuals();
@@ -7150,6 +7401,7 @@ export default function Home() {
       weaponBallistics.resetWeapon(player.activeWeapon);
       message =
         definition.reloadMode === 'shell' ? 'LOADING SHELL' : 'RELOADING';
+      recordFirearmRuntimeEvent('KeyR', 'committed');
       publishHud(0);
     };
 
@@ -7221,6 +7473,11 @@ export default function Home() {
               : selection === 'bomb'
                 ? 'C4 DEVICE READY — HOLD FIRE AT A SITE'
                 : 'FIELD KNIFE EQUIPPED';
+      recordFirearmRuntimeEvent(
+        selection === player.primaryWeapon ? 'Digit1' : selection === player.secondaryWeapon ? 'Digit2' : 'selection',
+        'committed',
+        { selectedWeapon: selection },
+      );
       publishHud(0);
     };
 
@@ -7532,12 +7789,15 @@ export default function Home() {
         cancelPlayerReload();
         message = getDefaultCombatMessage();
       }
+      recordFirearmRuntimeEvent('reload-deadline', 'committed', {
+        completedWeapon: weapon,
+      });
       publishHud(0);
     };
 
     const beginPlayerDeathCamera = (seed: number) => {
       weaponBallistics.reset();
-      spreadRandom = createSeededRandom(1602);
+      spreadRandom = createSeededRandom(firearmRuntimeSeed + 1);
       weaponSpecial.cancelPending(simulationNowMs);
       syncSilencerVisuals();
       resetSniperBoltCycle();
@@ -8338,8 +8598,18 @@ export default function Home() {
         buyOpen: buyMenuOpen, now, freezeEnds, equipReadyAt: player.equipReadyAtMs,
         nextShot: player.nextShot, specialReady: weaponSpecial.ready(player.activeWeapon, now),
         burstContinuation,
-      })) return;
-      if (player.activeWeapon === 'bomb') return;
+      })) {
+        recordFirearmRuntimeEvent(
+          burstContinuation ? 'burst-follow-up' : 'KeyF',
+          'rejected',
+          { reason: 'commit-precondition' },
+        );
+        return;
+      }
+      if (player.activeWeapon === 'bomb') {
+        recordFirearmRuntimeEvent('KeyF', 'rejected', { reason: 'bomb-active' });
+        return;
+      }
       interruptPlayerPlant();
       const isKnife = player.activeWeapon === 'knife';
       const isGrenade = player.activeWeapon === 'grenade';
@@ -8369,6 +8639,11 @@ export default function Home() {
           message = `${definition!.label} EMPTY`;
           publishHud(0);
         }
+        recordFirearmRuntimeEvent(
+          burstContinuation ? 'burst-follow-up' : 'KeyF',
+          'rejected',
+          { reason: firearmAmmo.reserve > 0 ? 'empty-started-reload' : 'empty-magazine' },
+        );
         return;
       }
 
@@ -8386,6 +8661,13 @@ export default function Home() {
       if (!burstContinuation) player.nextShot = now + (isKnife ? getKnifeAttack(knifeStab, false).cooldownMs :
         firearmKind === 'glock18' && weaponSpecial.snapshot().burst ? SPECIAL_TIMINGS.glockBurst : definition!.fireIntervalMs);
       const spread = getCurrentSpread();
+      const firearmRuntimeShotBasis = firearmRuntimeFixture && firearmKind
+        ? Object.freeze({
+          spread,
+          pose: Object.freeze(getBallisticPose()),
+          ballistic: Object.freeze(weaponBallistics.snapshot(firearmKind)),
+        })
+        : null;
       player.recoil = Math.min(
         definition?.recoil.maxPenalty ?? 0.12,
         player.recoil + (definition?.recoil.spreadKick ?? 0.075),
@@ -8436,6 +8718,8 @@ export default function Home() {
         hit: THREE.Intersection<THREE.Object3D>;
         direction: THREE.Vector3;
       }> = [];
+      const runtimeRays: Array<Record<string, unknown>> | null =
+        firearmRuntimeFixture ? [] : null;
       const surfaceHitLimit = firearmKind === 'shotgun' ? 4 : 1;
       for (let pellet = 0; pellet < pellets; pellet += 1) {
         const aim = sampleClassicSpread(spread, spreadRandom);
@@ -8463,6 +8747,8 @@ export default function Home() {
           const savedNear = raycaster.near;
           const savedFar = raycaster.far;
           try {
+            const traceEntries: Array<Record<string, unknown>> | null =
+              firearmRuntimeFixture ? [] : null;
             const result = tracePenetratingBullet(firearmKind, weaponSpecial.isSilenced(firearmKind), (near, far) => {
               raycaster.near = near;
               raycaster.far = far;
@@ -8470,19 +8756,61 @@ export default function Home() {
                 (candidate.object.userData.enemy as Enemy)?.alive);
               const surfaceHit = raycaster.intersectObjects(shotSurfaceMeshes, false)[0];
               // Surfaces win ties; friendly characters terminate the ray too.
-              if (targetHit && (!surfaceHit || targetHit.distance < surfaceHit.distance)) return {
-                kind: 'target' as const, distance: targetHit.distance,
-                hitGroup: targetHit.object.userData.hitGroup as HitGroup, target: targetHit,
-              };
-              if (!surfaceHit) return null;
+              if (targetHit && (!surfaceHit || targetHit.distance < surfaceHit.distance)) {
+                if (traceEntries) {
+                  const target = targetHit.object.userData.enemy as Enemy;
+                  traceEntries.push({
+                    caller: 'shoot', pellet,
+                    rayOrigin: raycaster.ray.origin.toArray(),
+                    rayDirection: raycaster.ray.direction.toArray(), near, far,
+                    targetDistance: targetHit.distance,
+                    hitGroup: targetHit.object.userData.hitGroup as HitGroup,
+                    targetId: `${target.team}:${target.id}`,
+                    targetStateAtShotStart: {
+                      health: target.health, armor: target.armor, helmet: target.helmet,
+                    },
+                  });
+                }
+                return {
+                  kind: 'target' as const, distance: targetHit.distance,
+                  hitGroup: targetHit.object.userData.hitGroup as HitGroup, target: targetHit,
+                };
+              }
+              if (!surfaceHit) {
+                if (traceEntries) traceEntries.push({
+                  caller: 'shoot', pellet,
+                  rayOrigin: raycaster.ray.origin.toArray(),
+                  rayDirection: raycaster.ray.direction.toArray(), near, far,
+                  result: 'no-hit',
+                });
+                return null;
+              }
               const box = colliderBoxesByMesh.get(surfaceHit.object);
+              const exitDistance = box
+                ? getAxisAlignedBoxExitDistance(raycaster.ray.origin, raycaster.ray.direction, box.min, box.max)
+                : null;
+              const material = getPenetrationMaterial(getSurfaceImpactKind(surfaceHit.object));
+              if (traceEntries) traceEntries.push({
+                caller: 'shoot', pellet,
+                rayOrigin: raycaster.ray.origin.toArray(),
+                rayDirection: raycaster.ray.direction.toArray(), near, far,
+                worldDistance: surfaceHit.distance, material,
+                collider: surfaceHit.object.name, exitDistance,
+              });
               return {
                 kind: 'world' as const, distance: surfaceHit.distance,
-                exitDistance: box ? getAxisAlignedBoxExitDistance(raycaster.ray.origin, raycaster.ray.direction, box.min, box.max) : null,
-                material: getPenetrationMaterial(getSurfaceImpactKind(surfaceHit.object)),
+                exitDistance, material,
                 collider: surfaceHit.object,
               };
             });
+            if (traceEntries && runtimeRays) {
+              traceEntries.forEach((entry) => {
+                entry.traceResult = result ? 'target' : 'rejected';
+                entry.exits = result?.exits ?? 0;
+                entry.rawDamage = result?.damage ?? null;
+              });
+              runtimeRays.push(...traceEntries);
+            }
             resolvedImpact = result ? 'target' : directImpact === 'world' ? 'world' : 'none';
             effectiveHit = result?.target;
             bulletDamage = result?.damage ?? null;
@@ -8515,6 +8843,13 @@ export default function Home() {
         const resolved = isKnife
           ? { ...before, health: Math.max(0, before.health - getKnifeAttack(knifeStab, true, Math.cos(player.yaw - enemy.bodyYaw) > 0.8).damage) }
           : resolveBulletDamage(before, firearmKind!, hitGroup, bulletDamage ?? 0);
+        const observedRay = runtimeRays && [...runtimeRays].reverse().find(
+          (entry) => entry.pellet === pellet && entry.targetId === `${enemy.team}:${enemy.id}`,
+        );
+        if (observedRay) {
+          observedRay.damageInputBefore = { ...before };
+          observedRay.damageResolved = { ...resolved };
+        }
         impacts.set(enemy, {
           health: resolved.health, armor: resolved.armor, helmet: resolved.helmet,
           damage: (previous?.damage ?? 0) + before.health - resolved.health,
@@ -8585,6 +8920,20 @@ export default function Home() {
       });
       resolveTeamElimination();
       if (autoUnscopeAfterShot) setScope(false, false);
+      if (firearmRuntimeFixture) {
+        recordFirearmRuntimeEvent(
+          burstContinuation ? 'burst-follow-up' : 'KeyF',
+          'committed',
+          {
+            caller: 'shoot',
+            burstContinuation,
+            shotBasis: firearmRuntimeShotBasis,
+            damageAggregation:
+              'Player damage resolves sequentially per pellet in this shot, then applies the accumulated target state after all rays finish.',
+            rays: runtimeRays,
+          },
+        );
+      }
       publishHud(0);
     };
 
@@ -10289,6 +10638,24 @@ export default function Home() {
 
         enemies.forEach((enemy) => {
           if (status !== 'active' || !enemy.alive) return;
+          if (
+            enemy === firearmRuntimeFixtureTarget &&
+            firearmRuntimeFixtureTargetTransform
+          ) {
+            // A named fixture target is a static range object. Keep its actual
+            // hit meshes under the production raycaster, but do not let the
+            // autonomous bot loop alter its pose, aim, motion, or death path
+            // between the setup receipt and the player's input receipt.
+            enemy.root.position.copy(firearmRuntimeFixtureTargetTransform.position);
+            enemy.root.rotation.y = firearmRuntimeFixtureTargetTransform.yaw;
+            enemy.bodyYaw = firearmRuntimeFixtureTargetTransform.yaw;
+            enemy.aimYaw = firearmRuntimeFixtureTargetTransform.yaw;
+            enemy.locomotionVelocityX = 0;
+            enemy.locomotionVelocityZ = 0;
+            enemy.movementSpeed = 0;
+            enemy.root.updateMatrixWorld(true);
+            return;
+          }
           enemy.motionResolvedThisTick = false;
           enemy.locomotionCommanded = false;
           const visualProfile = getCombatVisualWeaponProfile(
@@ -12690,6 +13057,12 @@ export default function Home() {
           <strong>3D RENDERER UNAVAILABLE</strong>
           <p>{renderError}</p>
         </section>
+      )}
+
+      {firearmRuntimeReceipt && (
+        <pre id="jkh-131-firearm-runtime-receipt" aria-live="polite">
+          {firearmRuntimeReceipt}
+        </pre>
       )}
 
       <div className="scanlines" aria-hidden="true" />
