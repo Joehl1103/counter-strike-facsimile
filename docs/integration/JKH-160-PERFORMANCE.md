@@ -1,5 +1,55 @@
 # JKH-160 / JKH-119 presentation optimization
 
+## Round 3: final builder round
+
+Coordinator measurements, exact Linux x86_64 / Node 22.23.2 trees:
+`0a01ac7` median p95 0.6635 ms, p50 approximately 0.51–0.56 ms;
+`f66744e` median p95 0.6064 ms; `b18cf72` median p95 0.6037 ms,
+min 0.488, max 0.777, official passes 2/10, p50 approximately 0.43–0.45 ms,
+p99 approximately 0.64–0.70 ms. Linux regressions pass 693/693. Each benchmark
+rig contains 93 nodes / 43 meshes. Target remains box p95 approximately 0.30 ms
+or less against the unchanged official 0.5 ms gate; Actions baseline was 1.05 ms.
+
+Base `b18cf72`; owned files: limb deformation and this record. Final plan:
+fuse the passes **inside** foot planting while keeping `write()` immediately
+observable. Measure virtual swing at unique boot vertices, preserve original
+anchor reduction order, then write swing/correction/normals together. Preserve
+each intermediate Float32 rounding step. Audit constant rig transforms, but
+skip freezing public joints if their standalone world queries could go stale.
+No analytic bounding-box approximation, deferred public output, test changes,
+or local performance run. Latest Linear project and issue/parent/dependency
+activity reread; coordinator retains review, timing and remote updates.
+
+Round 3 result:
+
+- Swing is evaluated virtually for boot contact, then swing, ground correction
+  and normal correction share one representative-vertex pass and one expansion
+  pass. A three-component scratch attribute preserves the intermediate storage
+  rounding. Invalid contacts still leave the swing-only result visible.
+- Each unique boot corner is transformed once into retained Float64 scratch.
+  Contact reduction still visits every original corner in original order, with
+  the same tolerance and repeated-corner weighting; no bounding approximation.
+- Bind-to-joint offsets are precomputed in Float64, and each hinge's sin/cos is
+  calculated once when its actual angle changes and shared by its segments.
+  Standalone deformation writes still restore complete current output before
+  returning; attribute identities and revision increments remain intact.
+- Further rig freezing was skipped: Three.js `updateWorldMatrix` can leave a
+  constant-local child's world matrix stale after an ancestor update unless a
+  forced traversal occurs. Public socket queries must continue working between
+  render traversals. No rig, weapon, pose or scene topology change in this round.
+- Final local Node v24.5.0 checks: **693/693 regressions**, typecheck and lint
+  pass; `git diff --check` passes. Logs: `outputs/jkh-160-performance/round-3/`.
+  Intermediate setup-syntax and lint failures were corrected; their logs remain
+  as `*-before-*-fix.log`. No tests, gates, scripts or CI files changed, and no
+  performance command, build, browser, server or push was run.
+- Expected effect: fewer full-leg reads/writes and matrix-vector evaluations,
+  plus less repeated hinge arithmetic. Extra retained scratch uses setup memory.
+  No behavior regression detected by the existing tests; exhaustive differential
+  equivalence and the approximately 0.30 ms p95 target remain unverified.
+  This is the final authorized builder round; next action is coordinator timing
+  and independent review of the exact new local commit, with no user decision
+  needed. Remote activity publication remains the coordinator's responsibility.
+
 ## Round 2: coordinator measurements and next candidate
 
 Coordinator-reported Linux x86_64 / Node 22.23.2 measurements, ten runs per
@@ -129,7 +179,7 @@ the source-backed implementation findings are retained in this record.
 
 ## Coordinator handoff / project activity draft
 
-JKH-160 / JKH-119 round-2 optimization delivered as a new local commit on
+JKH-160 / JKH-119 final round-3 optimization delivered as a new local commit on
 `feature/jkh-119-game-baseline-snapshot`; no push. Regression 693/693,
 typecheck and lint pass. Frozen benchmark and CI unchanged. Candidate performance
 and independent review are unverified. Next: measure the exact commit on the

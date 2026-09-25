@@ -61,12 +61,15 @@ type DeformationOperation = {
   readonly secondaryPivotY: number;
   readonly secondaryPivotZ: number;
   readonly uniqueOffsets: Uint32Array;
+  readonly relativePositions: Float64Array;
   readonly copies: Uint32Array;
   readonly positions: Float32Array;
   readonly normals: Float32Array;
   firstAngle: number;
   secondAngle: number;
 };
+
+type HingeRotation = { angle: number; sin: number; cos: number };
 
 /** Per-mesh CPU deformation state. All arrays are allocated during setup. */
 export type CharacterLimbDeformationController = {
@@ -84,10 +87,11 @@ export type CharacterLimbDeformationController = {
   readonly positionAttribute: THREE.BufferAttribute;
   readonly normalAttribute: THREE.BufferAttribute;
   readonly operations: readonly DeformationOperation[];
-  readonly footTranslationOffsets: Uint32Array;
-  readonly footTranslationCopies: Uint32Array;
-  readonly footNormalOffsets: Uint32Array;
-  readonly footNormalCopies: Uint32Array;
+  readonly kneeRotation: HingeRotation;
+  readonly ankleRotation: HingeRotation;
+  readonly elbowRotation: HingeRotation;
+  readonly footVertexOffsets: Uint32Array;
+  readonly footVertexCopies: Uint32Array;
   write: (angles?: CharacterLimbDeformationAngles) => void;
   reset: () => void;
 };
@@ -99,7 +103,11 @@ type FootPlantState = {
   readonly localDelta: THREE.Vector3;
   readonly localDeformationDelta: THREE.Vector3;
   readonly meshWorldInverse: THREE.Matrix4;
-  bootRange: CharacterLimbSegmentRange | null;
+  readonly bootOperation: DeformationOperation | null;
+  readonly bootWorldPositions: Float64Array;
+  readonly bootSources: Uint32Array;
+  /** Matches the output attribute's storage rounding without writing geometry. */
+  readonly swingPosition: THREE.BufferAttribute['array'];
   minimumWorldY: number;
   planted: boolean;
   targetWorldX: number;
@@ -111,7 +119,21 @@ const footPlantStates = new WeakMap<
   FootPlantState
 >();
 
-function createFootPlantState(mesh: THREE.Mesh): FootPlantState {
+function createFootPlantState(
+  mesh: THREE.Mesh,
+  bootOperation: DeformationOperation | null,
+): FootPlantState {
+  const bootVertexCount = bootOperation ? bootOperation.end - bootOperation.start : 0;
+  const bootSources = new Uint32Array(bootVertexCount);
+  for (let vertex = 0; vertex < bootVertexCount; vertex += 1) {
+    bootSources[vertex] = vertex * 3;
+  }
+  if (bootOperation) {
+    for (let index = 0; index < bootOperation.copies.length; index += 2) {
+      const destination = bootOperation.copies[index];
+      bootSources[destination / 3] = bootOperation.copies[index + 1];
+    }
+  }
   return {
     restPosition: mesh.position.clone(),
     bootAnchorWorld: new THREE.Vector3(),
@@ -119,7 +141,10 @@ function createFootPlantState(mesh: THREE.Mesh): FootPlantState {
     localDelta: new THREE.Vector3(),
     localDeformationDelta: new THREE.Vector3(),
     meshWorldInverse: new THREE.Matrix4(),
-    bootRange: null,
+    bootOperation,
+    bootWorldPositions: new Float64Array(bootVertexCount * 3),
+    bootSources,
+    swingPosition: mesh.geometry.getAttribute('position').array.slice(0, 3),
     minimumWorldY: Number.POSITIVE_INFINITY,
     planted: false,
     targetWorldX: 0,
@@ -246,16 +271,27 @@ function operationFromRange(
   const pivot = range.pivot;
   const isBoot = metadata.kind === 'leg' && range.segment === 'boot';
   const vertices = groupIdenticalVertices(range, bindPositions, bindNormals);
+  const pivotY = isBoot ? -0.32 : (pivot?.y ?? 0);
+  const pivotZ = isBoot ? 0 : (pivot?.z ?? 0);
+  // Keep double precision: rounding these differences to Float32 would change
+  // the first rotation before its original attribute-store rounding point.
+  const relativePositions = new Float64Array(vertices.uniqueOffsets.length * 2);
+  for (let index = 0; index < vertices.uniqueOffsets.length; index += 1) {
+    const offset = range.start * 3 + vertices.uniqueOffsets[index];
+    relativePositions[index * 2] = bindPositions[offset + 1] - pivotY;
+    relativePositions[index * 2 + 1] = bindPositions[offset + 2] - pivotZ;
+  }
   return {
     start: range.start,
     end: range.end,
     kind,
     // A boot first follows the knee, then hinges around its own ankle pivot.
-    pivotY: isBoot ? -0.32 : (pivot?.y ?? 0),
-    pivotZ: isBoot ? 0 : (pivot?.z ?? 0),
+    pivotY,
+    pivotZ,
     secondaryPivotY: isBoot ? (pivot?.y ?? 0) : 0,
     secondaryPivotZ: isBoot ? (pivot?.z ?? 0) : 0,
     uniqueOffsets: vertices.uniqueOffsets,
+    relativePositions,
     copies: vertices.copies,
     positions: bindPositions.slice(range.start * 3, range.end * 3),
     normals: bindNormals.slice(range.start * 3, range.end * 3),
@@ -297,21 +333,11 @@ function groupIdenticalVertices(
   };
 }
 
-/** Expand calculated representatives into the unchanged non-indexed layout. */
-function copyRepeatedVertices(values: Float32Array, copies: Uint32Array): void {
-  for (let index = 0; index < copies.length; index += 2) {
-    const destination = copies[index];
-    const source = copies[index + 1];
-    values[destination] = values[source];
-    values[destination + 1] = values[source + 1];
-    values[destination + 2] = values[source + 2];
-  }
-}
-
 /** Select immutable nonzero influences once, retaining flat copy instructions. */
-function selectInfluencedVertices(
+function selectFootPlantVertices(
   operations: readonly DeformationOperation[],
-  influences: Float32Array,
+  weights: Float32Array,
+  slopes: Float32Array,
 ): { offsets: Uint32Array; copies: Uint32Array } {
   const offsets: number[] = [];
   const copies: number[] = [];
@@ -319,14 +345,14 @@ function selectInfluencedVertices(
     const rangeOffset = operation.start * 3;
     for (const localOffset of operation.uniqueOffsets) {
       const offset = rangeOffset + localOffset;
-      if (influences[offset / 3] !== 0) {
+      if (weights[offset / 3] !== 0 || slopes[offset / 3] !== 0) {
         offsets.push(offset);
       }
     }
     for (let index = 0; index < operation.copies.length; index += 2) {
       const destination = rangeOffset + operation.copies[index];
       const source = rangeOffset + operation.copies[index + 1];
-      if (influences[destination / 3] !== 0) {
+      if (weights[destination / 3] !== 0 || slopes[destination / 3] !== 0) {
         copies.push(destination, source);
       }
     }
@@ -337,13 +363,21 @@ function selectInfluencedVertices(
   };
 }
 
+/** Share exact trigonometric results between ranges using the same hinge. */
+function writeHingeRotation(rotation: HingeRotation, angle: number): void {
+  if (!Object.is(rotation.angle, angle)) {
+    rotation.angle = angle;
+    rotation.sin = Math.sin(angle);
+    rotation.cos = Math.cos(angle);
+  }
+}
+
 function writeRange(
   operation: DeformationOperation,
-  bindPositions: Float32Array,
   bindNormals: Float32Array,
-  knee: number,
-  ankle: number,
-  elbow: number,
+  kneeRotation: HingeRotation,
+  ankleRotation: HingeRotation,
+  elbowRotation: HingeRotation,
 ): void {
   if (operation.kind === 0) {
     // Its retained output starts at bind and never receives foot corrections.
@@ -352,18 +386,19 @@ function writeRange(
   const hasKnee =
     operation.kind === 1 || operation.kind === 2 || operation.kind === 3;
   const hasAnkle = operation.kind === 3;
-  const firstAngle = hasKnee ? knee : elbow;
-  const secondAngle = hasAnkle ? ankle : 0;
+  const firstRotation = hasKnee ? kneeRotation : elbowRotation;
+  const firstAngle = firstRotation.angle;
+  const secondAngle = hasAnkle ? ankleRotation.angle : 0;
   if (
     Object.is(operation.firstAngle, firstAngle) &&
     Object.is(operation.secondAngle, secondAngle)
   ) {
     return;
   }
-  const firstSin = Math.sin(firstAngle);
-  const firstCos = Math.cos(firstAngle);
-  const ankleSin = Math.sin(secondAngle);
-  const ankleCos = Math.cos(secondAngle);
+  const firstSin = firstRotation.sin;
+  const firstCos = firstRotation.cos;
+  const ankleSin = ankleRotation.sin;
+  const ankleCos = ankleRotation.cos;
   const positions = operation.positions;
   const normals = operation.normals;
   const pivotY = operation.pivotY;
@@ -381,15 +416,13 @@ function writeRange(
   for (let index = 0; index < uniqueOffsets.length; index += 1) {
     const localOffset = uniqueOffsets[index];
     const offset = rangeOffset + localOffset;
-    let y = bindPositions[offset + 1];
-    let z = bindPositions[offset + 2];
     let ny = bindNormals[offset + 1];
     let nz = bindNormals[offset + 2];
 
-    const dy = y - pivotY;
-    const dz = z - pivotZ;
-    y = pivotY + firstCos * dy - firstSin * dz;
-    z = pivotZ + firstSin * dy + firstCos * dz;
+    const dy = operation.relativePositions[index * 2];
+    const dz = operation.relativePositions[index * 2 + 1];
+    let y = pivotY + firstCos * dy - firstSin * dz;
+    let z = pivotZ + firstSin * dy + firstCos * dz;
     const normalY = firstCos * ny - firstSin * nz;
     nz = firstSin * ny + firstCos * nz;
     ny = normalY;
@@ -513,15 +546,17 @@ function writeController(
     return;
   }
   const operations = controller.operations;
+  writeHingeRotation(controller.kneeRotation, knee);
+  writeHingeRotation(controller.ankleRotation, ankle);
+  writeHingeRotation(controller.elbowRotation, elbow);
   for (let index = 0; index < operations.length; index += 1) {
     const operation = operations[index];
     writeRange(
       operation,
-      controller.bindPositions,
       controller.bindNormals,
-      knee,
-      ankle,
-      elbow,
+      controller.kneeRotation,
+      controller.ankleRotation,
+      controller.elbowRotation,
     );
     // Always restore public output, even on a cache hit: planting writes into
     // those arrays, whereas the retained segment output remains unplanted.
@@ -553,50 +588,66 @@ function resetController(controller: CharacterLimbDeformationController): void {
 function measureBootWorldBounds(
   controller: CharacterLimbDeformationController,
   state: FootPlantState,
+  swingOffsetZ: number | null,
 ): boolean {
-  const boot = state.bootRange;
+  const boot = state.bootOperation;
   if (!boot) {
     return false;
   }
   const positions = controller.positionAttribute.array as ArrayLike<number>;
+  const weights = controller.footPlantWeights;
   const elements = controller.mesh.matrixWorld.elements;
+  const worldPositions = state.bootWorldPositions;
+  const swingPosition = state.swingPosition;
+  // Transform each distinct boot corner once. The scratch buffer uses doubles
+  // because world-space coordinates were JavaScript numbers in the old pass.
+  for (let index = 0; index < boot.uniqueOffsets.length; index += 1) {
+    const localOffset = boot.uniqueOffsets[index];
+    const offset = boot.start * 3 + localOffset;
+    let x = positions[offset];
+    let y = positions[offset + 1];
+    let z = positions[offset + 2];
+    const weight = weights[offset / 3];
+    if (swingOffsetZ !== null && weight !== 0) {
+      swingPosition[0] = x + 0;
+      swingPosition[1] = y + 0;
+      swingPosition[2] = z + swingOffsetZ * weight;
+      x = swingPosition[0];
+      y = swingPosition[1];
+      z = swingPosition[2];
+    }
+    const inverseW = 1 / (
+      elements[3] * x + elements[7] * y + elements[11] * z + elements[15]
+    );
+    worldPositions[localOffset + 1] = (
+      elements[1] * x + elements[5] * y + elements[9] * z + elements[13]
+    ) * inverseW;
+    worldPositions[localOffset] = (
+      elements[0] * x + elements[4] * y + elements[8] * z + elements[12]
+    ) * inverseW;
+    worldPositions[localOffset + 2] = (
+      elements[2] * x + elements[6] * y + elements[10] * z + elements[14]
+    ) * inverseW;
+  }
   let minimumY = Number.POSITIVE_INFINITY;
   let anchorCount = 0;
   let anchorX = 0;
   let anchorZ = 0;
-  for (let vertex = boot.start; vertex < boot.end; vertex += 1) {
-    const offset = vertex * 3;
-    const x = positions[offset];
-    const y = positions[offset + 1];
-    const z = positions[offset + 2];
-    const inverseW = 1 / (
-      elements[3] * x + elements[7] * y + elements[11] * z + elements[15]
-    );
-    const worldY = (
-      elements[1] * x + elements[5] * y + elements[9] * z + elements[13]
-    ) * inverseW;
-    const newMinimum = worldY < minimumY - 1e-5;
-    const atMinimum = Math.abs(worldY - minimumY) <= 1e-5;
-    if (!newMinimum && !atMinimum) {
-      continue;
-    }
-    // Only sole candidates contribute X/Z. Preserve the original vertex
-    // order and repeated corners so anchor averaging rounds identically.
-    const worldX = (
-      elements[0] * x + elements[4] * y + elements[8] * z + elements[12]
-    ) * inverseW;
-    const worldZ = (
-      elements[2] * x + elements[6] * y + elements[10] * z + elements[14]
-    ) * inverseW;
-    if (newMinimum) {
+  // Preserve every repeated corner and its original order: changing the
+  // reduction order or using an AABB would change contact selection/rounding.
+  const sources = state.bootSources;
+  for (let vertex = 0; vertex < sources.length; vertex += 1) {
+    const offset = sources[vertex];
+    const worldY = worldPositions[offset + 1];
+    if (worldY < minimumY - 1e-5) {
       minimumY = worldY;
       anchorCount = 1;
-      anchorX = worldX;
-      anchorZ = worldZ;
-    } else {
+      anchorX = worldPositions[offset];
+      anchorZ = worldPositions[offset + 2];
+    } else if (Math.abs(worldY - minimumY) <= 1e-5) {
       anchorCount += 1;
-      anchorX += worldX;
-      anchorZ += worldZ;
+      anchorX += worldPositions[offset];
+      anchorZ += worldPositions[offset + 2];
     }
   }
   if (!Number.isFinite(minimumY) || anchorCount === 0) {
@@ -611,49 +662,56 @@ function measureBootWorldBounds(
   return true;
 }
 
-function applyFootLocalTranslation(
+/** Apply both rounded translations and the normal correction in one pass. */
+function writeFootPlantVertices(
   controller: CharacterLimbDeformationController,
   state: FootPlantState,
-  x: number,
-  y: number,
-  z: number,
+  swingOffsetZ: number | null,
+  applyCorrection: boolean,
 ): void {
   const positions = controller.positionAttribute.array as Float32Array;
-  const weights = controller.footPlantWeights;
-  const offsets = controller.footTranslationOffsets;
-  for (let index = 0; index < offsets.length; index += 1) {
-    const offset = offsets[index];
-    const weight = weights[offset / 3];
-    const translatedX = positions[offset] + x * weight;
-    const translatedY = positions[offset + 1] + y * weight;
-    const translatedZ = positions[offset + 2] + z * weight;
-    positions[offset] = translatedX;
-    positions[offset + 1] = translatedY;
-    positions[offset + 2] = translatedZ;
-  }
-  copyRepeatedVertices(positions, controller.footTranslationCopies);
-  state.localDeformationDelta.x += x;
-  state.localDeformationDelta.y += y;
-  state.localDeformationDelta.z += z;
-  controller.positionAttribute.needsUpdate = true;
-}
-
-function writeFootPlantNormals(
-  controller: CharacterLimbDeformationController,
-  state: FootPlantState,
-): void {
   const normals = controller.normalAttribute.array as Float32Array;
+  const weights = controller.footPlantWeights;
   const slopes = controller.footPlantWeightSlopes;
+  const swingPosition = state.swingPosition;
+  const correctionX = state.localDelta.x;
+  const correctionY = state.localDelta.y;
+  const correctionZ = state.localDelta.z;
   const dx = state.localDeformationDelta.x;
   const dy = state.localDeformationDelta.y;
   const dz = state.localDeformationDelta.z;
-  if (dx === 0 && dy === 0 && dz === 0) {
-    return;
-  }
-  const offsets = controller.footNormalOffsets;
+  const updateNormals = applyCorrection && (dx !== 0 || dy !== 0 || dz !== 0);
+  const offsets = controller.footVertexOffsets;
   for (let index = 0; index < offsets.length; index += 1) {
     const offset = offsets[index];
+    const weight = weights[offset / 3];
+    if (weight !== 0) {
+      let x = positions[offset];
+      let y = positions[offset + 1];
+      let z = positions[offset + 2];
+      if (swingOffsetZ !== null) {
+        // The original swing pass stored to the attribute before correction.
+        // Keep that storage rounding, even though we now write output once.
+        swingPosition[0] = x + 0;
+        swingPosition[1] = y + 0;
+        swingPosition[2] = z + swingOffsetZ * weight;
+        x = swingPosition[0];
+        y = swingPosition[1];
+        z = swingPosition[2];
+      }
+      if (applyCorrection) {
+        x += correctionX * weight;
+        y += correctionY * weight;
+        z += correctionZ * weight;
+      }
+      positions[offset] = x;
+      positions[offset + 1] = y;
+      positions[offset + 2] = z;
+    }
     const slope = slopes[offset / 3];
+    if (!updateNormals || slope === 0) {
+      continue;
+    }
     const nx = normals[offset];
     const nz = normals[offset + 2];
     const denominator = 1 + dy * slope;
@@ -677,11 +735,33 @@ function writeFootPlantNormals(
     normals[offset + 1] = normalY;
     normals[offset + 2] = normalZ;
   }
-  copyRepeatedVertices(normals, controller.footNormalCopies);
-  controller.normalAttribute.needsUpdate = true;
+  const copies = controller.footVertexCopies;
+  for (let index = 0; index < copies.length; index += 2) {
+    const destination = copies[index];
+    const source = copies[index + 1];
+    positions[destination] = positions[source];
+    positions[destination + 1] = positions[source + 1];
+    positions[destination + 2] = positions[source + 2];
+    if (updateNormals && slopes[destination / 3] !== 0) {
+      normals[destination] = normals[source];
+      normals[destination + 1] = normals[source + 1];
+      normals[destination + 2] = normals[source + 2];
+    }
+  }
+  // Preserve the public attribute revision increments as well as the data.
+  if (swingOffsetZ !== null) {
+    controller.positionAttribute.needsUpdate = true;
+  }
+  if (applyCorrection) {
+    controller.positionAttribute.needsUpdate = true;
+  }
+  if (updateNormals) {
+    controller.normalAttribute.needsUpdate = true;
+  }
 }
 
-function applyFootWorldTranslation(
+/** Solve the correction before touching vertices, so it can join the swing pass. */
+function resolveFootWorldTranslation(
   controller: CharacterLimbDeformationController,
   state: FootPlantState,
   targetY: number,
@@ -714,13 +794,9 @@ function applyFootWorldTranslation(
   // Let the boot slide once the correction exceeds a believable leg reach;
   // otherwise a fast bot or falling body turns the trousers into a rubber tube.
   state.localDelta.clampLength(0, CHARACTER_RENDERED_FOOT_MAX_CORRECTION);
-  applyFootLocalTranslation(
-    controller,
-    state,
-    state.localDelta.x,
-    state.localDelta.y,
-    state.localDelta.z,
-  );
+  state.localDeformationDelta.x += state.localDelta.x;
+  state.localDeformationDelta.y += state.localDelta.y;
+  state.localDeformationDelta.z += state.localDelta.z;
 }
 
 function writeFootPlanting(
@@ -728,34 +804,42 @@ function writeFootPlanting(
   input?: CharacterLimbFootPlantInput,
   ancestorsCurrent = false,
 ): void {
-  if (controller.limbKind !== 'leg') return;
+  if (controller.limbKind !== 'leg') {
+    return;
+  }
   const state = footPlantStates.get(controller);
-  if (!state) return;
+  if (!state) {
+    return;
+  }
 
   const supplied = input ?? {};
   state.localDeformationDelta.set(0, 0, 0);
   const plant = Math.min(Math.max(finite(supplied.plant), 0), 1);
   const releasePlant = 0.35;
   const activatePlant = 0.5;
-  if (plant < releasePlant) state.planted = false;
+  if (plant < releasePlant) {
+    state.planted = false;
+  }
 
   // A deformation write restores the authored mesh transform and bind shape.
   // Apply swing travel through the same hip-safe influence field used for
   // planting, so neither phase can pull the visible thigh out of the pelvis.
   controller.mesh.position.copy(state.restPosition);
-  if (!state.planted)
-    applyFootLocalTranslation(
-      controller,
-      state,
-      0,
-      0,
-      finite(supplied.swingOffsetZ),
-    );
+  const swingOffsetZ = state.planted ? null : finite(supplied.swingOffsetZ);
+  if (swingOffsetZ !== null) {
+    state.localDeformationDelta.z += swingOffsetZ;
+  }
 
   // updateWorldMatrix also refreshes ancestors after the authority-sibling
   // root has translated this frame. This is presentation-only state.
   controller.mesh.updateWorldMatrix(!ancestorsCurrent, false);
-  if (!measureBootWorldBounds(controller, state)) return;
+  if (!measureBootWorldBounds(controller, state, swingOffsetZ)) {
+    // Even an unmeasurable contact used to leave the swing translation visible.
+    if (swingOffsetZ !== null) {
+      writeFootPlantVertices(controller, state, swingOffsetZ, false);
+    }
+    return;
+  }
 
   if (plant >= activatePlant && !state.planted) {
     state.targetWorldX = state.bootAnchorWorld.x;
@@ -786,11 +870,11 @@ function writeFootPlanting(
     groundY +
     toeClearance * (1 - smoothBlend) +
     CHARACTER_RENDERED_FOOT_PLANT_HEIGHT * smoothBlend;
-  applyFootWorldTranslation(controller, state, targetY);
+  resolveFootWorldTranslation(controller, state, targetY);
   // The graded correction bends the cloth surface. Update normals with the
   // inverse-transpose of that one-dimensional deformation field, avoiding a
   // general whole-geometry normal rebuild on every bot leg.
-  writeFootPlantNormals(controller, state);
+  writeFootPlantVertices(controller, state, swingOffsetZ, true);
 }
 
 /** Clone one mesh's geometry and prepare its immutable bind snapshot. */
@@ -838,12 +922,9 @@ export function createCharacterLimbDeformationController(
   const operations = metadata.segments.map((range) =>
     operationFromRange(metadata, range, bindPositions, bindNormals),
   );
-  const footTranslation = selectInfluencedVertices(
+  const footVertices = selectFootPlantVertices(
     operations,
     footPlantInfluences.weights,
-  );
-  const footNormals = selectInfluencedVertices(
-    operations,
     footPlantInfluences.slopes,
   );
   const controller: CharacterLimbDeformationController = {
@@ -859,18 +940,18 @@ export function createCharacterLimbDeformationController(
     positionAttribute,
     normalAttribute,
     operations,
-    footTranslationOffsets: footTranslation.offsets,
-    footTranslationCopies: footTranslation.copies,
-    footNormalOffsets: footNormals.offsets,
-    footNormalCopies: footNormals.copies,
+    kneeRotation: { angle: 0, sin: 0, cos: 1 },
+    ankleRotation: { angle: 0, sin: 0, cos: 1 },
+    elbowRotation: { angle: 0, sin: 0, cos: 1 },
+    footVertexOffsets: footVertices.offsets,
+    footVertexCopies: footVertices.copies,
     write: undefined as unknown as (
       angles?: CharacterLimbDeformationAngles,
     ) => void,
     reset: undefined as unknown as () => void,
   };
-  const footPlant = createFootPlantState(mesh);
-  footPlant.bootRange =
-    controller.ranges.find(({ segment }) => segment === 'boot') ?? null;
+  const bootOperation = operations.find((operation) => operation.kind === 3) ?? null;
+  const footPlant = createFootPlantState(mesh, bootOperation);
   footPlantStates.set(controller, footPlant);
   installConservativeBounds(
     geometry,
