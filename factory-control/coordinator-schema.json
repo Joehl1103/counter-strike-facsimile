@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task", "reason"],
+  "properties": {
+    "reason": { "type": "string" },
+    "task": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["issueId", "title", "instructions", "ownedFiles"],
+          "properties": {
+            "issueId": { "type": "string" },
+            "title": { "type": "string" },
+            "instructions": { "type": "string" },
+            "ownedFiles": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      ]
+    }
+  }
+}

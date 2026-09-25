@@ -1,5 +1,9 @@
 # Counter-Strike delivery workflow
 
+[Factory Control for Mac](factory-control/README.md) adds a native menu-bar utility
+for independent project factories. Add folders and work instructions, then toggle
+projects On or Off. It starts Off and lets existing workers finish after Off.
+
 This initial repository contains the PR validation and merge workflow only.
 Game code, raw assets, original history and local archives are not included.
 Game checks explicitly report scaffold mode until an authorized game import.
