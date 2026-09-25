@@ -27,8 +27,9 @@ aggregate gate requires every planned chunk to pass. Locks use dependency or
 line-count summaries; binary/assets, generated files and large deletions are
 listed exclusions. Only binary/asset-only PRs can pass without a model review.
 Overflow fails closed. The status remains `Independent Codex review` with
-`Reviewed <head> against <base>`. Default 60k-character chunks, cap 40, four in
-parallel: estimate 3–8 runner minutes per chunk, up to 20 at timeout. See the
+`Reviewed <head> against <base>`. Default 100k-character chunks, cap 60, four in
+parallel: estimate chunks × roughly 3 runner minutes (PR #9: about 37 chunks,
+110 minutes of the 2,000-minute monthly quota), up to 20 per chunk at timeout. See the
 Review provider section in MERGE_COORDINATOR.md for limits and exclusions.
 Reviewer workflow/script changes activate only after reaching main because
 `pull_request_target` uses the base workflow.

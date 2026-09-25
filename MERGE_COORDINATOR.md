@@ -161,7 +161,7 @@ only on its assigned chunk. Unchanged callers are not copied; insufficient
 context must be reported as a limitation or an incomplete review.
 
 Planning orders workflow/CI changes, source, tests, scripts/config, then docs/data.
-Chunks default to **60,000 diff characters**, with a **40-chunk cap** and up to
+Chunks default to **100,000 diff characters**, with a **60-chunk cap** and up to
 **four concurrent reviewers**. Large file diffs split at hunk boundaries, then
 line ranges for oversized hunks (character fragments for an oversized single
 line); labels identify file, part and HEAD lines. Split parts concatenate to the
@@ -193,7 +193,9 @@ this status is not asset/provenance or game acceptance.
 
 Cloud does not support structured-output requests. Each reviewer returns JSON
 with exact head, base and chunk ID, completeness, verdict, summary, findings and
-limitations. Reports use seven-day `codex-review-<chunk id>` artifacts.
+limitations. Reports use seven-day `codex-review-<chunk id>` artifacts. Rerunning
+a reviewer leg overwrites its previous artifact; the gate still rejects duplicate
+or extra chunk IDs.
 [review-gate.mjs](.github/scripts/review-gate.mjs), on a fresh runner without model
 secrets, requires a successful plan and reviewer matrix, no overflow, exactly one
 report per planned chunk and no extra IDs. Each report must pass the existing
@@ -205,15 +207,23 @@ The gate retains the unchanged-head/base recheck and publishes the same single
 commit status: context `Independent Codex review`, success description exactly
 `Reviewed <head> against <base>`. The coordinator depends on this format.
 
-Runner-minute planning estimate (not a measured provider benchmark): with 3–8
-minutes per chunk including setup, 10 chunks use roughly 30–80 runner minutes
-plus planning/gate overhead; 40 use roughly 120–320. Four-way parallelism reduces
-elapsed time, not total minutes. The 20-minute reviewer timeout permits up to
-800 reviewer minutes at the cap, before overhead; retries consume more. Against
-the private Free repository's supplied 2,000-minute monthly budget, split very
-large PRs and inspect overflow before rerunning. Provider latency, review quality
-and live Actions execution remain unverified by offline tests. This remains a
-Codex CLI review; TypeSafe Jev only classifies retry/human-handoff cases.
+Sizing supplied for PR #9: 302 files and 3.6 MB of non-lock diff exceeded the old
+60,000-character/40-chunk limits, leaving 117 files uncovered. The revised limits
+estimate about 37 chunks. A 100,000-character diff is roughly 25,000 tokens,
+leaving room for instructions and context within the supplied 128k-token
+`gpt-oss:120b` context capacity; actual token use varies with content.
+
+Runner-minute planning estimate: **chunks × roughly 3 minutes**, so PR #9 would
+use about **110 minutes**, plus planning/gate overhead, against the private Free
+repository's supplied **2,000-minute monthly quota**. At the 60-chunk cap, estimate
+180 reviewer minutes. Four-way parallelism reduces elapsed time, not total
+minutes. The unchanged 20-minute reviewer timeout permits up to 1,200 reviewer
+minutes at the cap, before overhead; retries consume more. These are sizing and
+cost estimates, not measured end-to-end provider timings. Overflow still skips
+the reviewer matrix and publishes failure, with uncovered files in the step
+summary. Provider latency, review quality and live Actions execution remain
+unverified by offline tests. This remains a Codex CLI review; TypeSafe Jev only
+classifies retry/human-handoff cases.
 
 Provider contract checked 2026-09-17: [Ollama OpenAI compatibility](https://docs.ollama.com/api/openai-compatibility),
 [Codex integration](https://docs.ollama.com/integrations/codex), and

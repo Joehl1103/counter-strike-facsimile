@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 import { buildPlan, classifyFile, manifestDigest, renderPacket, renderPrompt } from './review-plan.mjs';
 
 // Each fixture uses real objects and leaves the checkout at base during rendering.
@@ -43,6 +44,15 @@ function items(plan) {
 }
 
 describe('trusted git-object planning', () => {
+  test('defaults to a 100000-character budget and 60 chunks for larger PRs', (context) => {
+    const input = fixture(context, {}, { 'large.ts': 'const value = true;\n'.repeat(4000) });
+    const plan = buildPlan(input);
+    assert.equal(plan.budget, 100_000);
+    assert.equal(plan.maxChunks, 60);
+    assert.equal(plan.chunks.length, 1);
+    assert.equal(plan.overflow, false);
+  });
+
   test('classifies paths and orders workflow, source, tests, scripts/config, docs/data', (context) => {
     const input = fixture(context, { 'small.ts': 'remove\n', 'large.ts': 'remove\n'.repeat(200) }, {
       '.github/workflows/ci.yml': 'name: ci\n', 'src/main.ts': 'export const value = 1;\n',
@@ -219,6 +229,62 @@ describe('nested untrusted HEAD packet', () => {
 
 
 describe('planner and gate CLI integration', () => {
+  test('overflow with a skipped matrix fails the gate and published status, listing uncovered files', async (context) => {
+    const input = fixture(context, {}, {
+      'first.ts': 'const first = true;\n'.repeat(30),
+      'second.ts': 'const second = true;\n'.repeat(30),
+    });
+    const plan = buildPlan({ ...input, budget: 300, maxChunks: 1 });
+    assert.equal(plan.overflow, true);
+    const reportsDir = join(input.repoDir, 'reports');
+    mkdirSync(reportsDir);
+    const summaryPath = join(input.repoDir, 'summary.txt');
+    const gatePath = fileURLToPath(new URL('./review-gate.mjs', import.meta.url));
+    const gate = spawnSync(process.execPath, [gatePath], {
+      cwd: input.repoDir, encoding: 'utf8',
+      env: { ...process.env, REVIEW_HEAD: input.head, REVIEW_BASE: input.base,
+        REVIEW_CHUNK_BUDGET: '300', REVIEW_MAX_CHUNKS: '1', REVIEW_DIGEST: plan.digest,
+        REVIEW_REPORTS: reportsDir, REVIEW_RESULT: 'skipped', PLAN_RESULT: 'success',
+        GATE_PREPARATION_RESULT: 'success', GITHUB_STEP_SUMMARY: summaryPath },
+    });
+    assert.equal(gate.status, 1);
+    const summary = readFileSync(summaryPath, 'utf8');
+    assert.match(summary, /"complete": false/);
+    assert.match(summary, /Plan overflow/);
+    for (const path of new Set(plan.uncovered.map((item) => item.path))) {
+      assert.ok(summary.includes(path), `Summary must name uncovered file ${path}`);
+    }
+
+    // Execute the actual workflow publisher with a local GitHub stub. No network.
+    const workflow = readFileSync(new URL('../workflows/codex-review.yml', import.meta.url), 'utf8');
+    const marker = '          script: |\n';
+    const script = workflow.slice(workflow.lastIndexOf(marker) + marker.length)
+      .split('\n').map((line) => line.slice(12)).join('\n');
+    const original = { number: 9, head: { sha: input.head }, base: { sha: input.base } };
+    const statuses = [];
+    const failures = [];
+    const validationOutcome = gate.status === 0 ? 'success' : 'failure';
+    await runInNewContext(`(async () => { ${script} })()`, {
+      process: { env: { VALIDATION_RESULT: validationOutcome } },
+      context: { payload: { pull_request: original }, repo: { owner: 'owner', repo: 'repo' },
+        serverUrl: 'https://github.example', runId: 1 },
+      github: { rest: {
+        pulls: { get: async () => ({ data: original }) },
+        repos: { createCommitStatus: async (status) => {
+          statuses.push(status);
+        } },
+      } },
+      core: { setFailed: (message) => {
+        failures.push(message);
+      } },
+    });
+    assert.equal(statuses.length, 1);
+    assert.equal(statuses[0].context, 'Independent Codex review');
+    assert.equal(statuses[0].state, 'failure');
+    assert.equal(statuses[0].sha, input.head);
+    assert.equal(failures.length, 1);
+  });
+
   test('regenerates an identical manifest across checkouts and validates downloaded artifacts', (context) => {
     const input = fixture(context, {}, { 'app.ts': 'candidate value\n' });
     const plannerPath = fileURLToPath(new URL('./review-plan.mjs', import.meta.url));

@@ -5,8 +5,8 @@ import { appendFileSync, lstatSync, mkdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const DEFAULT_BUDGET = 60_000;
-export const DEFAULT_MAX_CHUNKS = 40;
+export const DEFAULT_BUDGET = 100_000;
+export const DEFAULT_MAX_CHUNKS = 60;
 export const DEFAULT_MAX_COPY_BYTES = 2 * 1024 * 1024;
 const LOCK_NAMES = new Set(['package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml']);
 

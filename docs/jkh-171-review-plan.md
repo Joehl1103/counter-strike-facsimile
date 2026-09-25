@@ -17,7 +17,13 @@ SHA-256 digest with the plan job. Reports travel as separate chunk artifacts.
 No candidate code, configuration, or symlink is executed or installed.
 
 Local result: implemented planner/packet, matrix workflow and aggregate gate.
-The 32 new planner/gate tests pass. Full suite: 125 pass, three existing relay
+The 35 planner/gate tests pass. Full suite: 128 pass, three existing relay
 loopback tests fail with sandbox `listen EPERM` on 127.0.0.1. CI policy, YAML
 parsing and whitespace checks pass. Live Actions/Ollama execution is unverified;
 activation requires these trusted files on main. No push performed.
+
+Follow-up: defaults increased to 100,000 characters and 60 chunks using the
+supplied PR #9 sizing; cost estimate is chunks × roughly three runner minutes.
+Reviewer reruns overwrite their prior artifact. Regression tests cover skipped
+matrices on overflow through the gate CLI, uncovered-file summary and actual
+status-publishing script; duplicate and extra chunk reports remain rejected.

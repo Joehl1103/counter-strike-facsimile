@@ -11,5 +11,6 @@ The independent reviewer uses a trusted local relay so valid Ollama Cloud keys
 can authenticate without becoming visible to PR code or the Codex subprocess.
 
 Reviewers receive exact PR diffs in bounded chunks plus nested HEAD-file context.
+Defaults allow 100,000 diff characters per chunk and up to 60 chunks.
 A trusted aggregate gate requires every chunk report to pass for the same head
 and base; exclusions and overflow are documented in MERGE_COORDINATOR.md.

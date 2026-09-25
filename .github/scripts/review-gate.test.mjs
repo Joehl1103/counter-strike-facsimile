@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
@@ -86,6 +86,14 @@ describe('aggregate independent review gate', () => {
 
 
 describe('downloaded artifact structure', () => {
+  test('reviewer uploads replace the prior artifact when rerunning a leg', () => {
+    const workflow = readFileSync(new URL('../workflows/codex-review.yml', import.meta.url), 'utf8');
+    const uploadStep = workflow.match(/      - uses: actions\/upload-artifact@[\s\S]*?(?=\n  review-gate:)/)?.[0];
+    assert.ok(uploadStep, 'Workflow must upload per-chunk reports.');
+    assert.match(uploadStep, /          overwrite: true/);
+    assert.match(uploadStep, /          name: codex-review-\$\{\{ matrix.chunk \}\}/);
+  });
+
   test('requires one correctly named report per artifact directory and rejects extra files', (context) => {
     const directory = mkdtempSync(join(tmpdir(), 'review-gate-'));
     context.after(() => rmSync(directory, { recursive: true, force: true }));

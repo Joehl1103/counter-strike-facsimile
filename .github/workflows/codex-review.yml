@@ -161,6 +161,7 @@ jobs:
           path: ${{ runner.temp }}/codex-review-report/${{ matrix.chunk }}.json
           if-no-files-found: error
           retention-days: 7
+          overwrite: true
 
   review-gate:
     name: Publish independent review result
