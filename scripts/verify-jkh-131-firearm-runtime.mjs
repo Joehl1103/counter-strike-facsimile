@@ -61,9 +61,11 @@ const writeJson = (name, value) => writeFile(join(output, name), JSON.stringify(
 
 async function runCase(caseId) {
   const browser = await chromium.launch({
+    channel: 'chromium',
     headless: false,
     args: [
-      '--enable-webgl', '--ignore-gpu-blocklist', '--disable-background-timer-throttling',
+      '--use-gl=angle', '--use-angle=gl', '--use-cmd-decoder=passthrough',
+      '--disable-dev-shm-usage', '--ignore-gpu-blocklist', '--disable-background-timer-throttling',
       '--disable-renderer-backgrounding',
     ],
   });
@@ -86,7 +88,7 @@ async function runCase(caseId) {
     const domCapturedAt = new Date().toISOString();
     const screenshot = join(output, `${caseId}-${name}.png`);
     const screenshotStartedAt = new Date().toISOString();
-    await page.screenshot({ path: screenshot, timeout: 10_000 });
+    await page.screenshot({ path: screenshot, timeout: 60_000 });
     const screenshotCapturedAt = new Date().toISOString();
     const pngSha256 = createHash('sha256').update(await readFile(screenshot)).digest('hex');
     const captureTiming = {
