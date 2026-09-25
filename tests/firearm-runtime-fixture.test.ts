@@ -70,7 +70,7 @@ function shotWithHitGroup(hitGroup: string) {
       pellet: 0, targetId: 't:0', traceResult: 'target', rawDamage: 80,
       hitGroup, exits: 0,
       damageInputBefore: { health: 100, armor: 0, helmet: false },
-      damageResolved: { health: 20, armor: 0, helmet: false },
+      damageResolved: { health: 20, armor: 0, helmet: false, healthDamage: 80 },
     }] },
   };
 }
@@ -115,10 +115,11 @@ void test('lethal shotgun pellets remain a valid sequential damage aggregate', (
   const shot = shotWithHitGroup('torso');
   shot.target.health = 0;
   shot.details.rays[0].damageResolved.health = 0;
+  shot.details.rays[0].damageResolved.healthDamage = 100;
   shot.details.rays.push({
     ...shot.details.rays[0], pellet: 1, hitGroup: 'leg',
     damageInputBefore: { health: 0, armor: 0, helmet: false },
-    damageResolved: { health: 0, armor: 0, helmet: false },
+    damageResolved: { health: 0, armor: 0, helmet: false, healthDamage: 0 },
   });
   assert.deepEqual(
     assertFirearmRuntimeObservation(fixture, beforeTarget, shot).observedHitGroups,

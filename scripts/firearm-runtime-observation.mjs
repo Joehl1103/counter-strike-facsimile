@@ -64,7 +64,11 @@ export function assertFirearmRuntimeObservation(fixture, beforeTarget, shot) {
     } else {
       assert.equal(ray.damageResolved.health, 0, 'post-lethal pellet revived the target');
     }
-    expectedDamageInput = ray.damageResolved;
+    expectedDamageInput = {
+      health: ray.damageResolved.health,
+      armor: ray.damageResolved.armor,
+      helmet: ray.damageResolved.helmet,
+    };
   }
   assert.ok(shot.target.health < beforeTarget.health, 'live target health did not decrease');
   const lastRay = damagingRays.at(-1);
