@@ -60,6 +60,9 @@ type DeformationOperation = Readonly<{
   pivotZ: number;
   secondaryPivotY: number;
   secondaryPivotZ: number;
+  vertexGroups: readonly Uint32Array[];
+  bindPositionRange: Float32Array;
+  bindNormalRange: Float32Array;
 }>;
 
 /** Per-mesh CPU deformation state. All arrays are allocated during setup. */
@@ -78,6 +81,8 @@ export type CharacterLimbDeformationController = {
   readonly positionAttribute: THREE.BufferAttribute;
   readonly normalAttribute: THREE.BufferAttribute;
   readonly operations: readonly DeformationOperation[];
+  readonly footTranslationGroups: readonly Uint32Array[];
+  readonly footNormalGroups: readonly Uint32Array[];
   write: (angles?: CharacterLimbDeformationAngles) => void;
   reset: () => void;
 };
@@ -88,7 +93,6 @@ type FootPlantState = {
   readonly worldDelta: THREE.Vector3;
   readonly localDelta: THREE.Vector3;
   readonly localDeformationDelta: THREE.Vector3;
-  readonly vertexWorld: THREE.Vector3;
   readonly meshWorldInverse: THREE.Matrix4;
   bootRange: CharacterLimbSegmentRange | null;
   minimumWorldY: number;
@@ -109,7 +113,6 @@ function createFootPlantState(mesh: THREE.Mesh): FootPlantState {
     worldDelta: new THREE.Vector3(),
     localDelta: new THREE.Vector3(),
     localDeformationDelta: new THREE.Vector3(),
-    vertexWorld: new THREE.Vector3(),
     meshWorldInverse: new THREE.Matrix4(),
     bootRange: null,
     minimumWorldY: Number.POSITIVE_INFINITY,
@@ -231,6 +234,8 @@ function validateMetadata(
 function operationFromRange(
   metadata: CharacterLimbGeometryMetadata,
   range: CharacterLimbSegmentRange,
+  bindPositions: Float32Array,
+  bindNormals: Float32Array,
 ): DeformationOperation {
   const kind = segmentOperationKind(metadata.kind, range.segment);
   const pivot = range.pivot;
@@ -244,15 +249,44 @@ function operationFromRange(
     pivotZ: isBoot ? 0 : (pivot?.z ?? 0),
     secondaryPivotY: isBoot ? (pivot?.y ?? 0) : 0,
     secondaryPivotZ: isBoot ? (pivot?.z ?? 0) : 0,
+    vertexGroups: groupIdenticalVertices(range, bindPositions, bindNormals),
+    bindPositionRange: bindPositions.subarray(range.start * 3, range.end * 3),
+    bindNormalRange: bindNormals.subarray(range.start * 3, range.end * 3),
   };
+}
+
+/** Share arithmetic across triangle corners, never across different hinges. */
+function groupIdenticalVertices(
+  range: CharacterLimbSegmentRange,
+  bindPositions: Float32Array,
+  bindNormals: Float32Array,
+): readonly Uint32Array[] {
+  const groups = new Map<string, number[]>();
+  // Bit keys preserve signed zero as well as exact Float32 identity. Positions
+  // also determine the planting weight/slope, so all six inputs must match.
+  const positionBits = new Uint32Array(bindPositions.buffer);
+  const normalBits = new Uint32Array(bindNormals.buffer);
+  for (let vertex = range.start; vertex < range.end; vertex += 1) {
+    const offset = vertex * 3;
+    const positionKey = `${positionBits[offset]},${positionBits[offset + 1]},${positionBits[offset + 2]}`;
+    const normalKey = `${normalBits[offset]},${normalBits[offset + 1]},${normalBits[offset + 2]}`;
+    const key = `${positionKey},${normalKey}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(offset);
+    } else {
+      groups.set(key, [offset]);
+    }
+  }
+  return Array.from(groups.values(), (offsets) => Uint32Array.from(offsets));
 }
 
 function writeRange(
   operation: DeformationOperation,
   bindPositions: Float32Array,
   bindNormals: Float32Array,
-  positions: ArrayLike<number> & { [index: number]: number },
-  normals: ArrayLike<number> & { [index: number]: number },
+  positions: THREE.BufferAttribute['array'],
+  normals: THREE.BufferAttribute['array'],
   kneeSin: number,
   kneeCos: number,
   ankleSin: number,
@@ -260,6 +294,13 @@ function writeRange(
   elbowSin: number,
   elbowCos: number,
 ): void {
+  if (operation.kind === 0) {
+    // The upper segment never hinges, but planting may have deformed it on the
+    // previous frame. Restore it with the same bind data, using bulk copies.
+    positions.set(operation.bindPositionRange, operation.start * 3);
+    normals.set(operation.bindNormalRange, operation.start * 3);
+    return;
+  }
   const hasKnee =
     operation.kind === 1 || operation.kind === 2 || operation.kind === 3;
   const hasAnkle = operation.kind === 3;
@@ -274,8 +315,8 @@ function writeRange(
     anklePivotY = pivotY + kneeCos * ankleDy - kneeSin * ankleDz;
     anklePivotZ = pivotZ + kneeSin * ankleDy + kneeCos * ankleDz;
   }
-  for (let vertex = operation.start; vertex < operation.end; vertex += 1) {
-    const offset = vertex * 3;
+  for (const group of operation.vertexGroups) {
+    const offset = group[0];
     const x = bindPositions[offset];
     let y = bindPositions[offset + 1];
     let z = bindPositions[offset + 2];
@@ -311,12 +352,15 @@ function writeRange(
       ny = normalY;
     }
 
-    positions[offset] = x;
-    positions[offset + 1] = y;
-    positions[offset + 2] = z;
-    normals[offset] = nx;
-    normals[offset + 1] = ny;
-    normals[offset + 2] = nz;
+    for (let corner = 0; corner < group.length; corner += 1) {
+      const destination = group[corner];
+      positions[destination] = x;
+      positions[destination + 1] = y;
+      positions[destination + 2] = z;
+      normals[destination] = nx;
+      normals[destination + 1] = ny;
+      normals[destination + 2] = nz;
+    }
   }
 }
 
@@ -405,12 +449,8 @@ function writeController(
   const ankleCos = Math.cos(ankle);
   const elbowSin = Math.sin(elbow);
   const elbowCos = Math.cos(elbow);
-  const positions = controller.positionAttribute.array as ArrayLike<number> & {
-    [index: number]: number;
-  };
-  const normals = controller.normalAttribute.array as ArrayLike<number> & {
-    [index: number]: number;
-  };
+  const positions = controller.positionAttribute.array;
+  const normals = controller.normalAttribute.array;
   if (knee === 0 && ankle === 0 && elbow === 0) {
     (positions as Float32Array).set(controller.bindPositions);
     (normals as Float32Array).set(controller.bindNormals);
@@ -461,30 +501,53 @@ function measureBootWorldBounds(
   state: FootPlantState,
 ): boolean {
   const boot = state.bootRange;
-  if (!boot) return false;
+  if (!boot) {
+    return false;
+  }
   const positions = controller.positionAttribute.array as ArrayLike<number>;
+  const elements = controller.mesh.matrixWorld.elements;
   let minimumY = Number.POSITIVE_INFINITY;
   let anchorCount = 0;
   let anchorX = 0;
   let anchorZ = 0;
   for (let vertex = boot.start; vertex < boot.end; vertex += 1) {
     const offset = vertex * 3;
-    state.vertexWorld
-      .set(positions[offset], positions[offset + 1], positions[offset + 2])
-      .applyMatrix4(controller.mesh.matrixWorld);
-    const y = state.vertexWorld.y;
-    if (y < minimumY - 1e-5) {
-      minimumY = y;
+    const x = positions[offset];
+    const y = positions[offset + 1];
+    const z = positions[offset + 2];
+    const inverseW = 1 / (
+      elements[3] * x + elements[7] * y + elements[11] * z + elements[15]
+    );
+    const worldY = (
+      elements[1] * x + elements[5] * y + elements[9] * z + elements[13]
+    ) * inverseW;
+    const newMinimum = worldY < minimumY - 1e-5;
+    const atMinimum = Math.abs(worldY - minimumY) <= 1e-5;
+    if (!newMinimum && !atMinimum) {
+      continue;
+    }
+    // Only sole candidates contribute X/Z. Preserve the original vertex
+    // order and repeated corners so anchor averaging rounds identically.
+    const worldX = (
+      elements[0] * x + elements[4] * y + elements[8] * z + elements[12]
+    ) * inverseW;
+    const worldZ = (
+      elements[2] * x + elements[6] * y + elements[10] * z + elements[14]
+    ) * inverseW;
+    if (newMinimum) {
+      minimumY = worldY;
       anchorCount = 1;
-      anchorX = state.vertexWorld.x;
-      anchorZ = state.vertexWorld.z;
-    } else if (Math.abs(y - minimumY) <= 1e-5) {
+      anchorX = worldX;
+      anchorZ = worldZ;
+    } else {
       anchorCount += 1;
-      anchorX += state.vertexWorld.x;
-      anchorZ += state.vertexWorld.z;
+      anchorX += worldX;
+      anchorZ += worldZ;
     }
   }
-  if (!Number.isFinite(minimumY) || anchorCount === 0) return false;
+  if (!Number.isFinite(minimumY) || anchorCount === 0) {
+    return false;
+  }
   state.minimumWorldY = minimumY;
   state.bootAnchorWorld.set(
     anchorX / anchorCount,
@@ -503,13 +566,18 @@ function applyFootLocalTranslation(
 ): void {
   const positions = controller.positionAttribute.array as Float32Array;
   const weights = controller.footPlantWeights;
-  for (let vertex = 0; vertex < weights.length; vertex += 1) {
-    const weight = weights[vertex];
-    if (weight === 0) continue;
-    const offset = vertex * 3;
-    positions[offset] += x * weight;
-    positions[offset + 1] += y * weight;
-    positions[offset + 2] += z * weight;
+  for (const group of controller.footTranslationGroups) {
+    const offset = group[0];
+    const weight = weights[offset / 3];
+    const translatedX = positions[offset] + x * weight;
+    const translatedY = positions[offset + 1] + y * weight;
+    const translatedZ = positions[offset + 2] + z * weight;
+    for (let corner = 0; corner < group.length; corner += 1) {
+      const destination = group[corner];
+      positions[destination] = translatedX;
+      positions[destination + 1] = translatedY;
+      positions[destination + 2] = translatedZ;
+    }
   }
   state.localDeformationDelta.x += x;
   state.localDeformationDelta.y += y;
@@ -526,11 +594,12 @@ function writeFootPlantNormals(
   const dx = state.localDeformationDelta.x;
   const dy = state.localDeformationDelta.y;
   const dz = state.localDeformationDelta.z;
-  if (dx === 0 && dy === 0 && dz === 0) return;
-  for (let vertex = 0; vertex < slopes.length; vertex += 1) {
-    const slope = slopes[vertex];
-    if (slope === 0) continue;
-    const offset = vertex * 3;
+  if (dx === 0 && dy === 0 && dz === 0) {
+    return;
+  }
+  for (const group of controller.footNormalGroups) {
+    const offset = group[0];
+    const slope = slopes[offset / 3];
     const nx = normals[offset];
     const nz = normals[offset + 2];
     const denominator = 1 + dy * slope;
@@ -547,9 +616,15 @@ function writeFootPlantNormals(
     const magnitude = (lengthSquared > 0 && Number.isFinite(lengthSquared)
       ? Math.sqrt(lengthSquared)
       : Math.hypot(nx, ny, nz)) || 1;
-    normals[offset] = nx / magnitude;
-    normals[offset + 1] = ny / magnitude;
-    normals[offset + 2] = nz / magnitude;
+    const normalX = nx / magnitude;
+    const normalY = ny / magnitude;
+    const normalZ = nz / magnitude;
+    for (let corner = 0; corner < group.length; corner += 1) {
+      const destination = group[corner];
+      normals[destination] = normalX;
+      normals[destination + 1] = normalY;
+      normals[destination + 2] = normalZ;
+    }
   }
   controller.normalAttribute.needsUpdate = true;
 }
@@ -705,6 +780,13 @@ export function createCharacterLimbDeformationController(
     bindPositions,
     metadata.kind,
   );
+  const bindNormals = Float32Array.from(
+    normalAttribute.array as ArrayLike<number>,
+  );
+  const operations = metadata.segments.map((range) =>
+    operationFromRange(metadata, range, bindPositions, bindNormals),
+  );
+  const vertexGroups = operations.flatMap((operation) => operation.vertexGroups);
   const controller: CharacterLimbDeformationController = {
     mesh,
     geometry,
@@ -712,13 +794,17 @@ export function createCharacterLimbDeformationController(
     metadata,
     ranges: metadata.segments,
     bindPositions,
-    bindNormals: Float32Array.from(normalAttribute.array as ArrayLike<number>),
+    bindNormals,
     footPlantWeights: footPlantInfluences.weights,
     footPlantWeightSlopes: footPlantInfluences.slopes,
     positionAttribute,
     normalAttribute,
-    operations: metadata.segments.map((range) =>
-      operationFromRange(metadata, range),
+    operations,
+    footTranslationGroups: vertexGroups.filter(
+      (group) => footPlantInfluences.weights[group[0] / 3] !== 0,
+    ),
+    footNormalGroups: vertexGroups.filter(
+      (group) => footPlantInfluences.slopes[group[0] / 3] !== 0,
     ),
     write: undefined as unknown as (
       angles?: CharacterLimbDeformationAngles,
