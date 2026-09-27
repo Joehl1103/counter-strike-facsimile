@@ -102,7 +102,10 @@ import {
   inspectVisibleGeometryLoad,
 } from './graphics-budget';
 import { batchStaticVisualMeshes } from './static-visual-batching';
-import { batchPrimaryWorldFirearmVisuals } from './world-firearm-batching';
+import {
+  createWorldFirearmModel as createSharedWorldFirearmModel,
+  createWorldFirearmMuzzleFlash,
+} from './world-firearm-models';
 import { clipSpectatorCameraBoom } from './spectator-camera';
 import { canSkipBotRoundWait } from './skip-bot-round';
 import { dispatchActualRoundStart } from './actual-round-start';
@@ -1865,45 +1868,7 @@ export default function Home() {
     const createMuzzleFlash = (
       color: number,
       profile: ReturnType<typeof getCombatVisualWeaponProfile>,
-    ) => {
-      const light = new THREE.PointLight(
-        color,
-        profile.muzzleIntensityMin,
-        profile.muzzleRadius,
-        2,
-      );
-      light.userData.transient = true;
-      light.userData.muzzleIntensityMin = profile.muzzleIntensityMin;
-      light.userData.muzzleIntensityMax = profile.muzzleIntensityMax;
-      light.userData.muzzleSpriteScale = profile.muzzleSpriteScale;
-      const flareMaterial = new THREE.SpriteMaterial({
-        map: muzzleTexture,
-        color,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        toneMapped: false,
-      });
-      const flare = new THREE.Sprite(flareMaterial);
-      flare.scale.setScalar(profile.muzzleSpriteScale);
-      flare.renderOrder = 8;
-      flare.onBeforeRender = () => {
-        const intensityMin = light.userData.muzzleIntensityMin as number;
-        const intensityMax = light.userData.muzzleIntensityMax as number;
-        const spriteScale = light.userData.muzzleSpriteScale as number;
-        const intensityRange = intensityMax - intensityMin;
-        const strength = THREE.MathUtils.clamp(
-          (light.intensity - intensityMin) / intensityRange,
-          0,
-          1,
-        );
-        flareMaterial.opacity = strength;
-        flare.scale.setScalar(spriteScale * (0.78 + strength * 0.42));
-      };
-      light.add(flare);
-      return light;
-    };
+    ) => createWorldFirearmMuzzleFlash(color, profile, muzzleTexture);
     const applyMuzzleFlashProfile = (
       light: THREE.PointLight,
       profile: ReturnType<typeof getCombatVisualWeaponProfile>,
@@ -2411,70 +2376,15 @@ export default function Home() {
       });
     };
 
-    const createWorldFirearmModel = (kind: FirearmKind) => {
-      const root = new THREE.Group();
-      const definition = FIREARMS[kind];
-      if (isSecondaryWeaponKind(kind)) {
-        const model = createSecondaryWorldModel(kind, {
-          createMuzzleFlash: (secondaryKind) =>
-            createMuzzleFlash(
-              secondaryKind === 'deagle' ? 0xffa94b : 0xffc36a,
-              getCombatVisualWeaponProfile('bot', secondaryKind),
-            ),
-        });
-        const modelMaterials = new Set<THREE.MeshStandardMaterial>();
-        model.traverse((object) => {
-          if (!(object instanceof THREE.Mesh)) return;
-          (Array.isArray(object.material)
-            ? object.material
-            : [object.material]
-          ).forEach((material) => {
-            if (material instanceof THREE.MeshStandardMaterial)
-              modelMaterials.add(material);
-          });
-        });
-        modelMaterials.forEach((material) => {
-          const originalColor = material.color.getHex();
-          const worldMaterial =
-            originalColor === 0x4d5554
-              ? worldFirearmMaterials.polymer
-              : originalColor === 0xa9b0ae
-                ? worldFirearmMaterials.accent
-                : worldFirearmMaterials.metal;
-          material.copy(worldMaterial);
-          material.name = `${worldMaterial.name}-${kind}`;
-        });
-        root.add(model);
-        root.name = `${definition.label} world firearm`;
-        root.rotation.set(0.18, 0, Math.PI / 2);
-        root.scale.setScalar(0.76);
-        root.traverse((object) => {
-          if (!(object instanceof THREE.Mesh)) return;
-          object.castShadow = true;
-          object.receiveShadow = true;
-        });
-        return root;
-      }
-      const metalMaterial = worldFirearmMaterials.metal.clone();
-      const materials = {
-        metal: metalMaterial,
-        wood: worldFirearmMaterials.wood.clone(),
-        polymer: worldFirearmMaterials.polymer.clone(),
-        accent: kind === 'sniper' ? worldFirearmMaterials.accent.clone() : metalMaterial,
-      };
-      root.add(createPrimaryWorldModel(kind, materials));
-      if (kind === 'carbine') root.userData.silencerSocket = root.children[0].userData.silencerSocket;
-      root.name = `${definition.label} world firearm`;
-      root.rotation.set(0.18, 0, Math.PI / 2);
-      root.scale.setScalar(0.72);
-      root.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return;
-        object.castShadow = true;
-        object.receiveShadow = true;
+    const createWorldFirearmModel = (kind: FirearmKind) =>
+      createSharedWorldFirearmModel(kind, {
+        materials: worldFirearmMaterials,
+        createSecondaryMuzzleFlash: (secondaryKind) =>
+          createMuzzleFlash(
+            secondaryKind === 'deagle' ? 0xffa94b : 0xffc36a,
+            getCombatVisualWeaponProfile('bot', secondaryKind),
+          ),
       });
-      batchPrimaryWorldFirearmVisuals(root, kind);
-      return root;
-    };
 
     const hitMeshes: THREE.Mesh[] = [];
     const enemies: Enemy[] = [];

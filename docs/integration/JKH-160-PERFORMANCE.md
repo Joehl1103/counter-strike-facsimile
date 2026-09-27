@@ -45,9 +45,13 @@ the legacy mode is only a paired rebaseline oracle.
 - Each fixture bot retains the current 11 primary/secondary world-model factory
   branches, four hidden faceted meshes and an old procedural rig. Eleven simple
   sphere hit-proxy stand-ins preserve authority-tree traversal load; they are not
-  the exact production hitgroup shapes. Muzzle flash is a point-light stand-in
-  attached at the production weapon socket offset. The primary/secondary weapon
-  model factories and current weapon grip selection are real.
+  the exact production hitgroup shapes. The shared production world-firearm
+  factory retains outer groups, material remapping, transforms, primary batching,
+  shadow flags and secondary muzzle callbacks. Its shared muzzle constructor
+  builds the same light-plus-sprite hierarchy, profile metadata and render
+  callback; the CPU fixture passes a null texture because Node does not decode
+  browser canvas textures. The primary/secondary world-model factories and
+  current selected grip targets are real and asserted against both rig paths.
 - GLB source bytes are hash-recorded before parsing. Only material texture
   references are stripped from a fixture copy because Node has no browser image
   decoder; original geometry, skin, animation and binary chunks are retained.

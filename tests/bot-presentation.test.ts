@@ -170,9 +170,58 @@ function assertVectorClose(
 ): void {
   assert.ok(
     actual.distanceTo(expected) <= COMPARE_TOLERANCE,
-    `${label}: ${actual.toArray()} vs ${expected.toArray()}`,
+    `${label}: ${actual.toArray().join(', ')} vs ${expected.toArray().join(', ')}`,
   );
 }
+
+function quaternionsMatch(
+  actual: THREE.Quaternion,
+  expected: THREE.Quaternion,
+): boolean {
+  const actualLength = actual.length();
+  const expectedLength = expected.length();
+  if (Math.abs(actualLength - expectedLength) > COMPARE_TOLERANCE) {
+    return false;
+  }
+
+  const normalizedActual = actual.clone().normalize();
+  const normalizedExpected = expected.clone().normalize();
+  const directDifference = Math.hypot(
+    normalizedActual.x - normalizedExpected.x,
+    normalizedActual.y - normalizedExpected.y,
+    normalizedActual.z - normalizedExpected.z,
+    normalizedActual.w - normalizedExpected.w,
+  );
+  const oppositeDifference = Math.hypot(
+    normalizedActual.x + normalizedExpected.x,
+    normalizedActual.y + normalizedExpected.y,
+    normalizedActual.z + normalizedExpected.z,
+    normalizedActual.w + normalizedExpected.w,
+  );
+  return Math.min(directDifference, oppositeDifference) <= COMPARE_TOLERANCE;
+}
+
+test('quaternion equivalence handles equal non-unit and sign-opposite values', () => {
+  const rotation = new THREE.Quaternion(0.2, -0.3, 0.1, 0.9);
+  const identicalNonUnitRotation = rotation.clone();
+  const signOppositeRotation = new THREE.Quaternion(
+    -rotation.x,
+    -rotation.y,
+    -rotation.z,
+    -rotation.w,
+  );
+  const differentRotationScale = rotation.length();
+  const differentRotation = new THREE.Quaternion(
+    0,
+    Math.sin(0.1) * differentRotationScale,
+    0,
+    Math.cos(0.1) * differentRotationScale,
+  );
+
+  assert.ok(quaternionsMatch(rotation, identicalNonUnitRotation));
+  assert.ok(quaternionsMatch(rotation, signOppositeRotation));
+  assert.equal(quaternionsMatch(rotation, differentRotation), false);
+});
 
 function assertFixtureOutputsMatch(
   current: PresentationFixture,
@@ -188,7 +237,35 @@ function assertFixtureOutputsMatch(
     assert.deepEqual(currentBot.animationPose, legacyBot.animationPose);
     assert.deepEqual(currentBot.animationState, legacyBot.animationState);
     assert.deepEqual(currentBot.weaponGripOutput, legacyBot.weaponGripOutput);
+    assert.deepEqual(currentBot.weaponGripTargets, legacyBot.weaponGripTargets);
     assert.equal(currentBot.weaponKind, legacyBot.weaponKind);
+
+    const expectedDominantGrip = new THREE.Vector3(
+      ...currentBot.weaponGripTargets.dominant,
+    );
+    const expectedSupportGrip = new THREE.Vector3(
+      ...currentBot.weaponGripTargets.support,
+    );
+    assertVectorClose(
+      currentBot.rig.dominantGripTarget.position,
+      expectedDominantGrip,
+      'procedural rig dominant grip target',
+    );
+    assertVectorClose(
+      currentBot.rig.supportGripTarget.position,
+      expectedSupportGrip,
+      'procedural rig support grip target',
+    );
+    assertVectorClose(
+      currentBot.skinned.dominantGripTarget.position,
+      expectedDominantGrip,
+      'skinned dominant grip target',
+    );
+    assertVectorClose(
+      currentBot.skinned.supportGripTarget.position,
+      expectedSupportGrip,
+      'skinned support grip target',
+    );
 
     assertVectorClose(
       currentBot.authorityRoot.position,
@@ -226,8 +303,7 @@ function assertFixtureOutputsMatch(
         bone.name,
       );
       assert.ok(
-        bone.quaternion.angleTo(legacyBones[boneIndex].quaternion) <=
-          COMPARE_TOLERANCE,
+        quaternionsMatch(bone.quaternion, legacyBones[boneIndex].quaternion),
         bone.name,
       );
     });

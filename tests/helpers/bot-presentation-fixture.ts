@@ -10,6 +10,7 @@ import {
   setCharacterRigWeaponGripTargets,
   type CharacterRig,
   type CharacterRigWeaponGripOutput,
+  type CharacterRigWeaponGripTargets,
 } from '../../app/character-rig.ts';
 import {
   createBotAnimationPose,
@@ -19,14 +20,18 @@ import {
   type BotAnimationPose,
   type BotAnimationState,
 } from '../../app/bot-animation.ts';
-import { createPrimaryWorldModel } from '../../app/primary-weapon-models.ts';
 import { createFacetedLimbGeometry } from '../../app/character-visuals.ts';
 import {
   createCharacterLimbDeformationController,
   writeCharacterLimbFootPlanting,
   type CharacterLimbDeformationController,
 } from '../../app/character-limb-deformation.ts';
-import { createSecondaryWorldModel } from '../../app/secondary-weapon-models.ts';
+import {
+  createWorldFirearmMuzzleFlash,
+  createWorldFirearmModel,
+  type WorldFirearmMaterials,
+} from '../../app/world-firearm-models.ts';
+import { getCombatVisualWeaponProfile } from '../../app/combat-visual-effects.ts';
 import {
   createSkinnedCharacterInstance,
   createSkinnedCharacterTemplate,
@@ -39,7 +44,6 @@ import {
 import {
   getEnemyMuzzleOffsetZ,
   type FirearmKind,
-  type PrimaryWeaponKind,
   type SecondaryWeaponKind,
 } from '../../app/game-rules.ts';
 
@@ -76,6 +80,7 @@ export type PresentationFixtureBot = {
   animationState: BotAnimationState;
   animationPose: BotAnimationPose;
   weaponGripOutput: CharacterRigWeaponGripOutput;
+  weaponGripTargets: CharacterRigWeaponGripTargets;
   weaponKind: FirearmKind;
   hitProxy: THREE.Mesh;
   muzzleFlash: THREE.PointLight;
@@ -101,7 +106,7 @@ export type PresentationFixture = {
   dispose: () => void;
 };
 
-const primaryMaterials = {
+const worldFirearmMaterials: WorldFirearmMaterials = {
   metal: new THREE.MeshStandardMaterial({
     color: 0x404449,
     metalness: 0.68,
@@ -170,7 +175,9 @@ async function loadTemplates(): Promise<{
       let vertices = 0;
       let triangles = 0;
       template.scene.traverse((object) => {
-        if (!(object instanceof THREE.SkinnedMesh)) return;
+        if (!(object instanceof THREE.SkinnedMesh)) {
+          return;
+        }
         skinnedMeshes += 1;
         const position = object.geometry.getAttribute('position');
         vertices += position.count;
@@ -194,13 +201,18 @@ async function loadTemplates(): Promise<{
   };
 }
 
-function createWeapon(kind: FirearmKind): THREE.Object3D {
-  if (
-    ['glock18', 'usp', 'p228', 'deagle', 'fiveseven', 'elite'].includes(kind)
-  ) {
-    return createSecondaryWorldModel(kind as SecondaryWeaponKind);
-  }
-  return createPrimaryWorldModel(kind as PrimaryWeaponKind, primaryMaterials);
+function createWeapon(kind: FirearmKind): THREE.Group {
+  return createWorldFirearmModel(kind, {
+    materials: worldFirearmMaterials,
+    createSecondaryMuzzleFlash: (secondaryKind: SecondaryWeaponKind) => {
+      let color = 0xffc36a;
+      if (secondaryKind === 'deagle') {
+        color = 0xffa94b;
+      }
+      const profile = getCombatVisualWeaponProfile('bot', secondaryKind);
+      return createWorldFirearmMuzzleFlash(color, profile, null);
+    },
+  });
 }
 
 /** Test-only reconstruction of the pre-cleanup live presentation sequence. */
@@ -211,8 +223,9 @@ export function runLegacyBotPresentationFrame(
   elapsedSeconds: number,
 ): void {
   const controllers = bot.legacyControllers;
-  if (!controllers)
+  if (!controllers) {
     throw new Error('Legacy buffer controllers were not retained.');
+  }
 
   bot.skinned.visualRoot.position.set(
     bot.authorityRoot.position.x,
@@ -291,19 +304,19 @@ export async function createBotPresentationFixture(
     const hitProxy = hitProxies[0];
 
     const leftLeg = new THREE.Mesh(
-      createFacetedLimbGeometry(0.13, 0.56),
+      facetedLegGeometry,
       new THREE.MeshBasicMaterial(),
     );
     const rightLeg = new THREE.Mesh(
-      createFacetedLimbGeometry(0.13, 0.56),
+      facetedLegGeometry,
       new THREE.MeshBasicMaterial(),
     );
     const leftArm = new THREE.Mesh(
-      createFacetedLimbGeometry(0.105, 0.42),
+      facetedArmGeometry,
       new THREE.MeshBasicMaterial(),
     );
     const rightArm = new THREE.Mesh(
-      createFacetedLimbGeometry(0.105, 0.42),
+      facetedArmGeometry,
       new THREE.MeshBasicMaterial(),
     );
     const rig = createCharacterRig({
@@ -341,7 +354,12 @@ export async function createBotPresentationFixture(
       weapon.visible = kind === weaponKind;
       skinned.weaponSocket.add(weapon);
     }
-    const muzzleFlash = new THREE.PointLight(0xffa844, 0, 1.6, 2);
+    const muzzleProfile = getCombatVisualWeaponProfile('bot', weaponKind);
+    const muzzleFlash = createWorldFirearmMuzzleFlash(
+      0xffa844,
+      muzzleProfile,
+      null,
+    );
     muzzleFlash.position.set(
       -0.07,
       0.18,
@@ -355,7 +373,10 @@ export async function createBotPresentationFixture(
       }
     });
 
-    setCharacterRigWeaponGripTargets(rig, weaponKind);
+    const weaponGripTargets = setCharacterRigWeaponGripTargets(
+      rig,
+      weaponKind,
+    );
     setSkinnedCharacterWeaponGrip(skinned, weaponKind);
     const legacyControllers = options.retainLegacyBuffers
       ? {
@@ -375,6 +396,7 @@ export async function createBotPresentationFixture(
       animationState: createBotAnimationState(),
       animationPose: createBotAnimationPose(),
       weaponGripOutput: { leftElbowPitch: 0, rightElbowPitch: 0 },
+      weaponGripTargets,
       weaponKind,
       hitProxy,
       muzzleFlash,
@@ -392,16 +414,24 @@ export async function createBotPresentationFixture(
   });
 
   const disposableMaterials = new Set<THREE.Material>(
-    Object.values(primaryMaterials),
+    Object.values(worldFirearmMaterials),
   );
   const disposableGeometries = new Set<THREE.BufferGeometry>();
   scene.traverse((object) => {
-    if (!(object instanceof THREE.Mesh)) return;
+    if (!(object instanceof THREE.Mesh)) {
+      return;
+    }
     disposableGeometries.add(object.geometry);
     for (const material of Array.isArray(object.material)
       ? object.material
-      : [object.material])
+      : [object.material]) {
       disposableMaterials.add(material);
+    }
+  });
+  scene.traverse((object) => {
+    if (object instanceof THREE.Sprite) {
+      disposableMaterials.add(object.material);
+    }
   });
   return {
     scene,
