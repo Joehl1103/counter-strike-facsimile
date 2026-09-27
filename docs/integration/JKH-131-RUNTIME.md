@@ -96,3 +96,11 @@ The runtime harness is `scripts/verify-jkh-131-firearm-runtime.mjs`. It drives t
 - an explicit distinction between controlled replay, controlled setup, ordinary input, and any unavailable case.
 
 The harness rejects a mismatched served revision/hash, browser/page errors, missing receipt field, case reuse after an unapproved reset, or a result inferred only from source text. Runtime work begins only after the accepted base is serialized. Full `npm test` and performance work still require a coordinator-confirmed quiet window. After runtime receipts, fresh independent review remains required for JKH-131/JKH-120 acceptance.
+
+Current bounded runtime-observer coverage is narrower than this card: direct,
+unarmored rays are checked against independent source-card damage values at each
+observed ray distance, then against the expected health/armor/helmet result.
+The observer labels armored resolution and wall-attenuated raw-damage numbers
+as unsupported until their independent expected values are encoded. Successful
+wall controls retain topology/state-chain checks; blocked multi-wall controls
+inspect pellet 0 only and do not establish all-pellet coverage.

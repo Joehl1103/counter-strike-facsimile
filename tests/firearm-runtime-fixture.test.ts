@@ -64,13 +64,19 @@ void test('multi-wall fixtures cover the one-exit and two-exit weapon limits', (
 const beforeTarget = { id: 't:0', health: 100, armor: 0, helmet: false };
 const directFixture = { weapon: 'sniper', material: 'direct', wallCount: 0, hitGroup: 'torso' };
 function shotWithHitGroup(hitGroup: string) {
+  const rawDamage = hitGroup === 'torso' ? 113 : 84.75;
+  const health = Math.max(0, beforeTarget.health - rawDamage);
   return {
-    target: { ...beforeTarget, health: 20 },
+    target: { ...beforeTarget, health },
     details: { rays: [{
-      pellet: 0, targetId: 't:0', traceResult: 'target', rawDamage: 80,
+      pellet: 0, targetId: 't:0', traceResult: 'target', rawDamage,
+      targetDistance: 12.248428140951821,
       hitGroup, exits: 0,
       damageInputBefore: { health: 100, armor: 0, helmet: false },
-      damageResolved: { health: 20, armor: 0, helmet: false, healthDamage: 80 },
+      damageResolved: {
+        health, armor: 0, helmet: false, armorDamage: 0,
+        healthDamage: beforeTarget.health - health,
+      },
     }] },
   };
 }
@@ -82,7 +88,10 @@ void test('a positive AWP leg hit fails a requested torso case', () => {
   );
   assert.deepEqual(
     assertFirearmRuntimeObservation(directFixture, beforeTarget, shotWithHitGroup('torso')),
-    { outcome: 'target', observedHitGroups: ['torso'], wallsObserved: 0 },
+    {
+      outcome: 'target', observedHitGroups: ['torso'], wallsObserved: 0,
+      damageVerdict: 'verified-direct-unarmored',
+    },
   );
 });
 
@@ -110,23 +119,122 @@ void test('blocked multi-wall controls require each named collision and unchange
 });
 
 
-void test('lethal shotgun pellets remain a valid sequential damage aggregate', () => {
-  const fixture = { ...directFixture, weapon: 'shotgun' };
-  const shot = shotWithHitGroup('torso');
-  shot.target.health = 0;
-  shot.details.rays[0].damageResolved.health = 0;
-  shot.details.rays[0].damageResolved.healthDamage = 100;
-  shot.details.rays.push({
-    ...shot.details.rays[0], pellet: 1, hitGroup: 'leg',
-    damageInputBefore: { health: 0, armor: 0, helmet: false },
-    damageResolved: { health: 0, armor: 0, helmet: false, healthDamage: 0 },
-  });
-  assert.deepEqual(
-    assertFirearmRuntimeObservation(fixture, beforeTarget, shot).observedHitGroups,
-    ['torso', 'leg'],
+void test('retained direct rifle, M3, and scoped AWP receipts match frozen numeric expectations', () => {
+  const rifleBefore = { id: 'enemy:0', health: 100, armor: 0, helmet: false };
+  const rifleShot = {
+    target: { ...rifleBefore, health: 65 },
+    details: { rays: [{
+      pellet: 0, targetId: 'enemy:0', traceResult: 'target',
+      targetDistance: 12.257244933083394, hitGroup: 'torso', rawDamage: 35, exits: 0,
+      damageInputBefore: { health: 100, armor: 0, helmet: false },
+      damageResolved: { health: 65, armor: 0, helmet: false, armorDamage: 0, healthDamage: 35 },
+    }] },
+  };
+  const rifleFixture = { weapon: 'rifle', material: 'direct', wallCount: 0, hitGroup: 'torso', armor: 'none' };
+
+  const shotgunBefore = { id: 'enemy:0', health: 100, armor: 0, helmet: false };
+  const shotgunRays = ([
+    [0, 12.442361608615053, 'leg', 12, 100, 88],
+    [1, 12.24087758061833, 'torso', 16, 88, 72],
+    [2, 12.456631465711952, 'torso', 16, 72, 56],
+    [6, 12.307857901846567, 'torso', 16, 56, 40],
+    [8, 12.348230468351598, 'torso', 16, 40, 24],
+  ] as const).map(([pellet, targetDistance, hitGroup, rawDamage, healthBefore, healthAfter]) => ({
+    pellet, targetId: 'enemy:0', traceResult: 'target',
+    targetDistance, hitGroup, rawDamage, exits: 0,
+    damageInputBefore: { health: healthBefore, armor: 0, helmet: false },
+    damageResolved: {
+      health: healthAfter, armor: 0, helmet: false, armorDamage: 0,
+      healthDamage: healthBefore - healthAfter,
+    },
+  }));
+  const shotgunFixture = {
+    weapon: 'shotgun', material: 'direct', wallCount: 0,
+    hitGroup: 'torso', armor: 'none',
+  };
+  const shotgunShot = {
+    target: { ...shotgunBefore, health: 24 },
+    details: { rays: shotgunRays },
+  };
+
+  const awpBefore = { id: 'enemy:0', health: 100, armor: 0, helmet: false };
+  const awpShot = {
+    target: { ...awpBefore, health: 0 },
+    details: { shotBasis: { pose: { silenced: false } }, rays: [{
+      pellet: 0, targetId: 'enemy:0', traceResult: 'target',
+      targetDistance: 12.248428140951821, hitGroup: 'torso', rawDamage: 113, exits: 0,
+      damageInputBefore: { health: 100, armor: 0, helmet: false },
+      damageResolved: { health: 0, armor: 0, helmet: false, armorDamage: 0, healthDamage: 100 },
+    }] },
+  };
+  const awpFixture = { weapon: 'sniper', material: 'direct', wallCount: 0, hitGroup: 'torso', armor: 'none' };
+
+  // These compact projections are from the retained fired JSON receipts:
+  // outputs/jkh-131-resume-2026-09-27/evidence/runtime-single/rifle-12-5-torso-fired.json
+  // outputs/jkh-131-resume-2026-09-27/new/evidence/runtime-two/{shotgun,sniper}-12-5-torso-fired.json
+  assert.equal(assertFirearmRuntimeObservation(rifleFixture, rifleBefore, rifleShot).damageVerdict,
+    'verified-direct-unarmored');
+  assert.equal(assertFirearmRuntimeObservation(shotgunFixture, shotgunBefore, shotgunShot).damageVerdict,
+    'verified-direct-unarmored');
+  assert.equal(assertFirearmRuntimeObservation(awpFixture, awpBefore, awpShot).damageVerdict,
+    'verified-direct-unarmored');
+
+  const wrongRawDamage = structuredClone(rifleShot);
+  wrongRawDamage.details.rays[0].rawDamage = 36;
+  wrongRawDamage.details.rays[0].damageResolved = {
+    health: 64, armor: 0, helmet: false, armorDamage: 0, healthDamage: 36,
+  };
+  wrongRawDamage.target.health = 64;
+  assert.throws(
+    () => assertFirearmRuntimeObservation(rifleFixture, rifleBefore, wrongRawDamage),
+    /raw damage disagrees with frozen direct formula/,
   );
-  shot.details.rays[1].damageInputBefore.health = 100;
-  assert.throws(() => assertFirearmRuntimeObservation(fixture, beforeTarget, shot), /pellet damage chain/);
+
+  const wrongHealth = structuredClone(rifleShot);
+  wrongHealth.details.rays[0].damageResolved.health = 66;
+  wrongHealth.details.rays[0].damageResolved.healthDamage = 34;
+  wrongHealth.target.health = 66;
+  assert.throws(
+    () => assertFirearmRuntimeObservation(rifleFixture, rifleBefore, wrongHealth),
+    /applied damage disagrees with frozen unarmored direct result/,
+  );
+
+  const wrongArmor = structuredClone(rifleShot);
+  wrongArmor.details.rays[0].damageResolved.armor = 1;
+  wrongArmor.details.rays[0].damageResolved.armorDamage = -1;
+  wrongArmor.target.armor = 1;
+  assert.throws(
+    () => assertFirearmRuntimeObservation(rifleFixture, rifleBefore, wrongArmor),
+    /applied damage disagrees with frozen unarmored direct result/,
+  );
+});
+
+void test('a lethal sequential M3 pellet chain matches each pellet distance and raw result', () => {
+  const targetBefore = { id: 't:0', health: 20, armor: 0, helmet: false };
+  const fixture = { ...directFixture, weapon: 'shotgun' };
+  const shot = {
+    target: { ...targetBefore, health: 0 },
+    details: { rays: [
+      {
+        pellet: 0, targetId: 't:0', traceResult: 'target', targetDistance: 12.24,
+        hitGroup: 'torso', rawDamage: 16, exits: 0,
+        damageInputBefore: { health: 20, armor: 0, helmet: false },
+        damageResolved: { health: 4, armor: 0, helmet: false, armorDamage: 0, healthDamage: 16 },
+      },
+      {
+        pellet: 1, targetId: 't:0', traceResult: 'target', targetDistance: 12.24,
+        hitGroup: 'torso', rawDamage: 16, exits: 0,
+        damageInputBefore: { health: 4, armor: 0, helmet: false },
+        damageResolved: { health: 0, armor: 0, helmet: false, armorDamage: 0, healthDamage: 4 },
+      },
+    ] },
+  };
+  assert.deepEqual(
+    assertFirearmRuntimeObservation(fixture, targetBefore, shot).observedHitGroups,
+    ['torso', 'torso'],
+  );
+  shot.details.rays[1].damageInputBefore.health = 20;
+  assert.throws(() => assertFirearmRuntimeObservation(fixture, targetBefore, shot), /pellet damage chain/);
 });
 
 void test('a trace that exits the blocking wall and subsequently misses is not wall rejection evidence', () => {
