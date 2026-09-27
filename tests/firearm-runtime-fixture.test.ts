@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { assertFirearmRuntimeObservation, assertFirearmEarlyEquipRejection } from '../scripts/firearm-runtime-observation.mjs';
+import {
+  assertFirearmRuntimeObservation,
+  assertFirearmRuntimeDamageVerdictSupported,
+  assertFirearmEarlyEquipRejection,
+} from '../scripts/firearm-runtime-observation.mjs';
 import {
   FIREARM_RUNTIME_FIXTURE_SEED,
   FIREARM_RUNTIME_FIXTURES,
@@ -48,6 +52,31 @@ void test('the page observes ordinary actions and keeps the receipt outside visu
   assert.match(page, /damageAggregation:/);
   assert.match(page, /shotBasis: firearmRuntimeShotBasis/);
   assert.match(page, /firearmRuntimeFixture \? \[\] : null/);
+});
+
+void test('runtime damage acceptance fails closed on unsupported numeric verdicts', () => {
+  assert.doesNotThrow(() => assertFirearmRuntimeDamageVerdictSupported({
+    damageVerdict: 'verified-direct-unarmored',
+  }));
+  assert.doesNotThrow(() => assertFirearmRuntimeDamageVerdictSupported({
+    damageVerdict: 'not-applicable-blocked',
+  }));
+  assert.throws(
+    () => assertFirearmRuntimeDamageVerdictSupported({
+      damageVerdict: 'unsupported-armored-resolution',
+    }),
+    /numeric damage verification is unsupported.*unsupported-armored-resolution/,
+  );
+  assert.throws(
+    () => assertFirearmRuntimeDamageVerdictSupported({
+      damageVerdict: 'unsupported-wall-attenuation',
+    }),
+    /numeric damage verification is unsupported.*unsupported-wall-attenuation/,
+  );
+  assert.throws(
+    () => assertFirearmRuntimeDamageVerdictSupported({}),
+    /numeric damage verification is unsupported.*missing/,
+  );
 });
 
 void test('multi-wall fixtures cover the one-exit and two-exit weapon limits', () => {

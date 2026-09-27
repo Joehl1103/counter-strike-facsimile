@@ -26,6 +26,21 @@ const hitGroupMultipliers = {
   leg: 0.75,
 };
 
+const acceptedDamageVerdicts = new Set([
+  'verified-direct-unarmored',
+  'not-applicable-blocked',
+]);
+
+/** Fail closed when a case has no independent numeric damage verdict. */
+export function assertFirearmRuntimeDamageVerdictSupported(observation) {
+  const verdict = observation?.damageVerdict ?? 'missing';
+  assert.ok(
+    acceptedDamageVerdicts.has(verdict),
+    `numeric damage verification is unsupported for runtime case: ${verdict}`,
+  );
+  return observation;
+}
+
 function expectedDirectRawDamage(fixture, ray, shot) {
   assert.ok(Number.isFinite(ray.targetDistance) && ray.targetDistance >= 0,
     'direct target ray is missing its actual distance');

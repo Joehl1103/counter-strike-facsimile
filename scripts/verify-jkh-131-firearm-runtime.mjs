@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { assertFirearmRuntimeObservation, assertFirearmEarlyEquipRejection } from './firearm-runtime-observation.mjs';
+import {
+  assertFirearmRuntimeObservation,
+  assertFirearmRuntimeDamageVerdictSupported,
+  assertFirearmEarlyEquipRejection,
+} from './firearm-runtime-observation.mjs';
 import { platform, release, arch } from 'node:os';
 import { chromium } from 'playwright';
 import { createHash } from 'node:crypto';
@@ -238,6 +242,7 @@ async function runCase(caseId) {
     assert.ok(Array.isArray(committedShot.details.rays), 'missing actual ray observations');
     assert.ok(committedShot.details.rays.length > 0, 'the production shot emitted no ray observations');
     result.observation = assertFirearmRuntimeObservation(setup.fixture, beforeEarlyFire.target, committedShot);
+    assertFirearmRuntimeDamageVerdictSupported(result.observation);
     assert.equal(
       committedShot.player.ammo.magazine,
       beforeEarlyFire.player.ammo.magazine - 1,
