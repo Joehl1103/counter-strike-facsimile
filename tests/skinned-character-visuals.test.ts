@@ -1034,6 +1034,7 @@ void test('reduced grounding stays within two centimetres of full skin bounds in
     'fiveseven',
     'elite',
   ] as const;
+  const deathVariants = [0, 1, 2, 3] as const;
   const parentTransforms = [
     { position: [0, 0, 0] as const, rotation: [0, 0, 0] as const },
     {
@@ -1153,8 +1154,16 @@ void test('grounding support vertices match Three native skinning for both shipp
     try {
       const expectedSupportIndices = groundSupportIndexSignatures(instance);
       for (const [transformIndex, transform] of parentTransforms.entries()) {
-        instance.visualRoot.position.set(...transform.position);
-        instance.visualRoot.rotation.set(...transform.rotation);
+        instance.visualRoot.position.set(
+          transform.position[0],
+          transform.position[1],
+          transform.position[2],
+        );
+        instance.visualRoot.rotation.set(
+          transform.rotation[0],
+          transform.rotation[1],
+          transform.rotation[2],
+        );
         for (const [gripIndex, grip] of grips.entries()) {
           setSkinnedCharacterWeaponGrip(instance, grip);
           sampleSkinnedCharacterPose(
@@ -1182,7 +1191,10 @@ void test('grounding support vertices match Three native skinning for both shipp
           );
           applySkinnedCharacterDeathPose(
             instance,
-            getBotDeathPose(0.45, gripIndex % 4),
+            getBotDeathPose(
+              0.45,
+              deathVariants[gripIndex % deathVariants.length],
+            ),
           );
           assertGroundSupportMatchesNative(
             instance,
