@@ -151,11 +151,20 @@ void test('seeded sprays and recovery match across render rates without kicking 
 
 void test('all lethal routes share ballistic reset and retain the committed camera aim', () => {
   const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const runtimeSeedMatch = page.match(
+    /const firearmRuntimeSeed = firearmRuntimeFixture\s*\?\s*FIREARM_RUNTIME_FIXTURE_SEED\s*:\s*(\d+);/,
+  );
+  assert.ok(runtimeSeedMatch, 'runtime fixture must keep its isolated seed override');
+  const defaultRuntimeSeed = Number(runtimeSeedMatch[1]);
+  assert.equal(defaultRuntimeSeed, 1601);
+  assert.equal(defaultRuntimeSeed + 1, 1602);
+  assert.match(page, /createWeaponBallistics\(firearmRuntimeSeed\)/);
+
   const start = page.indexOf('    const beginPlayerDeathCamera =');
   const end = page.indexOf('    const ', start + 15);
   const death = page.slice(start,end);
   assert.match(death,/weaponBallistics\.reset\(\)/);
-  assert.match(death,/spreadRandom = createSeededRandom\(1602\)/);
+  assert.match(death,/spreadRandom = createSeededRandom\(firearmRuntimeSeed \+ 1\)/);
   assert.match(death,/pitch: camera\.rotation\.x/);
   assert.match(death,/yaw: camera\.rotation\.y/);
   // Bullet, HE, and C4 deaths converge on one player-death cleanup path.
