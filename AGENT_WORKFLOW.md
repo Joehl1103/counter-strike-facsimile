@@ -157,16 +157,22 @@ candidate at a time. [MERGE_COORDINATOR.md](MERGE_COORDINATOR.md) defines its
 TypeSafe Jev routing, bounded retry, exact-head/base evidence, deduplicated
 human handoff, and environment-scoped automation credential. The reviewer and
 status publishers remain on separate runners without the merge credential.
-Native strict rules remain mandatory; the coordinator cannot bypass them.
+Current enforcement modes and their limits are recorded in
+[MERGE_COORDINATOR.md](MERGE_COORDINATOR.md). Verify live rules and coordinator
+receipts; this document does not activate an enforcement mode or waive stronger
+task-specific protection requirements.
 
-[main-ruleset.json](.github/main-ruleset.json) requires a PR, resolved review
-conversations, an up-to-date branch and all three checks. It prevents force pushes
-and deletion and contains no bypass actors. Zero generic human approvals are
-required because the independent Codex review is its own mandatory gate.
-Enabling repository auto-merge alone is insufficient: the rules and trusted
-workflow must be active. The existing personal-repository trust model assumes
-trusted collaborators; check names and an Actions app ID are not a boundary
-against a malicious writer creating a same-named status.
+[main-ruleset.json](.github/main-ruleset.json) specifies the intended native
+policy: a PR, resolved conversations, an up-to-date branch and all three checks,
+with no force-push/deletion or bypass actors. The file alone does not establish
+that GitHub enforces those rules. Current main also implements the private-plan
+`self_enforced` mode documented in MERGE_COORDINATOR.md; it is not native branch
+protection and retains the stated direct-write and race limitations. All three
+current checks and independent review remain required in either mode. Local
+configuration, an auto-merge setting or a past activation record is not evidence
+that the current remote enforcement and credentials work. The personal-repository
+trust model assumes trusted collaborators; check names and an Actions app ID do
+not protect against a malicious writer creating a same-named status.
 
 Keep incomplete work in draft and do not mark it ready until its relevant
 runtime/visual evidence passes. A clean source review is not a substitute for
@@ -182,42 +188,35 @@ acceptance/closure authorization. An epic remains open until its integrated
 criteria pass. Preserve the factory method’s two independent normal-speed CT/T
 rounds and Joseph’s complete-product visual acceptance.
 
-## One-time GitHub activation
+## Activation record and current verification
 
-The workflow must be published on `main` before it can run. The initial public
-repository is still empty at this change’s start. Remote settings and the reviewer
-credential must be verified separately; see [AUTO_MERGE_SETUP.md](AUTO_MERGE_SETUP.md)
-for the concrete activation record and remaining steps.
+The workflow-only bootstrap was published on 2026-09-17; it is a historical
+step, not an empty-remote prerequisite still waiting to happen. See
+[AUTO_MERGE_SETUP.md](AUTO_MERGE_SETUP.md) for that dated activation evidence and
+[MERGE_COORDINATOR.md](MERGE_COORDINATOR.md) for current enforcement modes,
+private-plan limitations and credential requirements. The curated game import
+uses the existing issue-linked draft PR; it does not repeat bootstrap or permit
+publication of excluded source/history/assets.
 
-1. Resolve the existing initial-publication choice with Joseph. An empty remote
-   has no base branch for a PR; publish only the approved bootstrap content to
-   establish `main`, then deliver subsequent changes through PRs. Do not silently
-   import source/assets/history. A bootstrap exception is limited to creating
-   that initial base and must be explicitly authorized.
-2. Create the `codex-review` environment in repository Settings → Environments.
-   Restrict deployment branches/tags to the selected **branch** `main` only,
-   then add `OLLAMA_CLOUD_API` as an **environment secret**, not a repository secret.
-   Supply it through the secrets UI/CLI, never in a PR, issue or committed file.
-   This workflow uses the API-backed Codex Action; desktop sign-in is not its
-   credential. Verify that a PR/feature-branch workflow cannot use this
-   environment. No key is configured by this local setup. Also provision the main-only
-   `merge-coordinator` environment and its credentials described in
-   [MERGE_COORDINATOR.md](MERGE_COORDINATOR.md).
-3. Run the first linked PR and inspect all three checks. The Codex report is in
-   the `Publish independent review result` job summary. Fix failures before proceeding.
-4. Enable repository native auto-merge and apply [.github/main-ruleset.json](.github/main-ruleset.json).
-   It defines an active `main` ruleset requiring PRs, resolved review conversations,
-   an up-to-date branch and the three exact checks above. Require the checks
-   from GitHub Actions. Prevent force pushes and deletions; do not configure an
-   agent/admin bypass. Agents must inspect changes to workflows, gate scripts
-   and agent instructions particularly carefully. Do not require a generic
-   human approval count as a substitute for the Codex gate.
-5. Verify with a linked ready PR that missing/failing checks hold the merge, a
-   new commit requires fresh results, and all passing checks cause the trusted
-   coordinator to complete the protected squash merge. Until this succeeds, report
-   end-to-end automatic merging as unverified. Bootstrap the approved initial
-   `main` before enabling this ruleset; the ruleset contains no branch-creation
-   status-check exception.
+Before delivery, verify the live main/head refs, actual repository visibility,
+current rules mode and credential access. Keep the API credential in the
+`codex-review` environment and the separate automation credential in
+`merge-coordinator`; do not place them in source, comments or repository-wide
+secrets. Verify the actual environment restrictions rather than assuming the
+plan enforces configured settings. Desktop sign-in is not the review API key.
+
+Inspect all three required checks on the current candidate and base. The
+independent result is in `Publish independent review result`; failed, missing,
+stale or incomplete results hold delivery. When native rules are supported,
+verify the exact required checks, resolved conversations and up-to-date branch
+policy with no bypass actors. When the coordinator reports `self_enforced`,
+record the limits documented in MERGE_COORDINATOR.md explicitly; do not call it
+native protection or use it to waive a stronger instruction.
+
+End-to-end automatic merging remains unverified until actual linked-PR evidence
+shows missing/failed checks hold the merge, new commits invalidate old results,
+and an authorized ready candidate merges against the exact reviewed base. No
+settings, credential or enforcement change is authorized merely by this checklist.
 
 Sources checked 2026-09-16:
 [OpenAI Codex Action documentation](https://learn.chatgpt.com/docs/github-action)
@@ -242,8 +241,9 @@ candidates. If `main` advances, it updates clean issue branches automatically.
 For conflicts, resolve the reported files, push and obtain fresh checks/review
 without force-pushing.
 
-Delivery here ends at a confirmed merge to protected `main`. Hosting deployment
-is separate. The coordinator uses a dedicated repository-scoped credential so updates and
+Delivery here ends at a confirmed authorized merge to `main`, with current
+checks and enforcement evidence recorded. Stronger protection requirements must
+be verified separately and are not waived here. Hosting deployment is separate. The coordinator uses a dedicated repository-scoped credential so updates and
 merges trigger fresh workflows. A separate manual merge made with GITHUB_TOKEN
 may not trigger a new push workflow; verify actual runs.
 When a separate main validation run is needed, explicitly dispatch the existing

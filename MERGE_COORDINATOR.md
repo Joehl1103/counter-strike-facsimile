@@ -115,7 +115,7 @@ The 22-file workflow-only bootstrap was published on 2026-09-17 as remote main
 `2d5ff1e26a0922bfc8218899c27fdc4d7e757598`. It excludes game source, original
 history, raw assets and the retained archive. At that bootstrap, strict ruleset
 23595815 was active; current private-plan enforcement limits are described above.
-initial CI and empty-queue coordinator startup passed. Those runs do not
+Initial CI and empty-queue coordinator startup passed. Those runs do not
 establish PR review, update or merge behavior. The bootstrap record includes the reviewer environment
 credential; the repository duplicate was removed. See the current [activation record](AUTO_MERGE_SETUP.md).
 
