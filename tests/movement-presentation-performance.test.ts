@@ -226,10 +226,6 @@ void test('8-bot movement presentation stays allocation-stable and under the 60 
         frameMilliseconds,
       })}`,
     );
-    assert.ok(
-      p95Milliseconds < TARGET_P95_MILLISECONDS,
-      `8-bot live skinned presentation p95 ${p95Milliseconds.toFixed(4)} ms >= ${TARGET_P95_MILLISECONDS} ms`,
-    );
     assertStableSceneIdentity(sceneIdentity, fixture.scene);
     fixture.bots.forEach((bot) => {
       assert.ok(Number.isFinite(bot.animationPose.leftKneePitch));
@@ -252,6 +248,10 @@ void test('8-bot movement presentation stays allocation-stable and under the 60 
       );
       assert.equal(bot.skinned.visualRoot.visible, bot.authorityRoot.visible);
     });
+    assert.ok(
+      p95Milliseconds < TARGET_P95_MILLISECONDS,
+      `8-bot live skinned presentation p95 ${p95Milliseconds.toFixed(4)} ms >= ${TARGET_P95_MILLISECONDS} ms`,
+    );
   } finally {
     fixture.dispose();
   }
