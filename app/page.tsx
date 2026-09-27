@@ -5648,6 +5648,33 @@ export default function Home() {
       const target = firearmRuntimeFixtureTarget;
       const special = weaponSpecial.snapshot();
       const pose = getBallisticPose();
+      target?.root.updateMatrixWorld(true);
+      target?.skinned.visualRoot.updateMatrixWorld(true);
+      const authorityPosition = target?.root.getWorldPosition(new THREE.Vector3());
+      const visiblePosition = target?.skinned.visualRoot.getWorldPosition(
+        new THREE.Vector3(),
+      );
+      const authorityYaw = target?.root.rotation.y;
+      const visibleYaw = target?.skinned.visualRoot.rotation.y;
+      let visualAlignment: Readonly<Record<string, unknown>> | null = null;
+      if (
+        target &&
+        authorityPosition &&
+        visiblePosition &&
+        authorityYaw != null &&
+        visibleYaw != null
+      ) {
+        visualAlignment = Object.freeze({
+          authorityPosition: Object.freeze(authorityPosition.toArray()),
+          visiblePosition: Object.freeze(visiblePosition.toArray()),
+          distance: authorityPosition.distanceTo(visiblePosition),
+          yawDelta: Math.abs(THREE.MathUtils.euclideanModulo(
+            visibleYaw - authorityYaw + Math.PI,
+            Math.PI * 2,
+          ) - Math.PI),
+          visible: target.skinned.visualRoot.visible,
+        });
+      }
       const receipt = Object.freeze({
         schemaVersion: 1,
         buildIdentity: JKH129_BUILD_IDENTITY,
@@ -5692,6 +5719,7 @@ export default function Home() {
           armor: target.armor,
           helmet: target.helmet,
           alive: target.alive,
+          visualAlignment,
         }),
         details: Object.freeze(details),
       });
@@ -6572,6 +6600,7 @@ export default function Home() {
       target.root.rotation.y = player.yaw + Math.PI;
       target.bodyYaw = target.root.rotation.y;
       target.aimYaw = target.root.rotation.y;
+      syncBotRigToAuthority(target);
       target.route = [new THREE.Vector2(targetX, targetZ)];
       target.movementDecisionTimer = Number.POSITIVE_INFINITY;
       target.fireCooldown = Number.POSITIVE_INFINITY;
@@ -10299,6 +10328,7 @@ export default function Home() {
             enemy.locomotionVelocityZ = 0;
             enemy.movementSpeed = 0;
             enemy.root.updateMatrixWorld(true);
+            syncBotRigToAuthority(enemy);
             return;
           }
           enemy.motionResolvedThisTick = false;

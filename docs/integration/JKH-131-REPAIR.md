@@ -17,3 +17,21 @@ Frozen runtime constants remain1280x720/high/10ms/seed1947, actual hit-group and
 Adapted archived c2b4bd5 finite localhost fixture/receipt, driver and card without importing history/assets. Exact requested hit group, named target, damage application and wall sequence now gate a passed case; AWP leg-only regression is explicit. Two/three wood slabs are finite named fixture cases, with collider cleanup on reset. AWP direct target observations now use ordinary KeyV scope before KeyF, so new scoped results are a fresh baseline, not equivalent to earlier unscoped shots. The earlier unscoped failure remains evidence.
 
 Only standing single-shot direct/blocked-material observations are implemented. Full reload/cadence/stance/special/armor numerical matrix remains pending. No runtime or visual acceptance is claimed. Runtime card remains1280x720/high/seed1947; software-worker limits may prevent that baseline. No quality downgrade is silently accepted.
+
+## Fixture target visual synchronization repair — 2026-09-27
+
+Frozen integrated candidate `e49916b` established direct numerical rifle, M3,
+and scoped-AWP observations but its retained setup images show the visible skinned
+target at its old spawn while the authority root and hit meshes are at the aimed
+fixture position. The fixture setup and static-target early-return updated the
+authority root only. This bounded repair uses existing `syncBotRigToAuthority`
+at both seams, so the rendered sibling copies the authority anchor and yaw while
+the target remains a static, ordinary-input range target.
+
+Fixture receipts now include a diagnostic-only authority/visible position,
+yaw-delta, and visibility projection. The existing three-case driver rejects a
+missing diagnostic, hidden sibling, a position difference greater than 0.001
+scene units, or a yaw difference greater than 0.001 radians at setup and fired
+capture. This guard rejects the demonstrated old mismatch; it does not replace
+inspection of the new rendered images. No firearm formulas, proxies, camera aim,
+assets, normal bot loop, or quality/performance thresholds change.

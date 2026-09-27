@@ -63,6 +63,20 @@ const report = {
 
 const writeJson = (name, value) => writeFile(join(output, name), JSON.stringify(value, null, 2));
 
+function assertFixtureTargetVisualAlignment(receipt, stage) {
+  const alignment = receipt.latest.target?.visualAlignment;
+  assert.ok(alignment, `${stage} receipt is missing target visual-alignment diagnostics`);
+  assert.equal(alignment.visible, true, `${stage} target visual sibling is hidden`);
+  assert.ok(
+    alignment.distance <= 0.001,
+    `${stage} visible target is ${alignment.distance} scene units from authority`,
+  );
+  assert.ok(
+    alignment.yawDelta <= 0.001,
+    `${stage} visible target yaw differs from authority by ${alignment.yawDelta} radians`,
+  );
+}
+
 async function runCase(caseId) {
   const browser = await chromium.launch({
     channel: 'chromium',
@@ -145,6 +159,7 @@ async function runCase(caseId) {
     assert.equal(setup.viewport.height, 720);
     assert.equal(setup.viewport.quality, 'high');
     assert.equal(setup.viewport.fixedStepMs, 10);
+    assertFixtureTargetVisualAlignment(result.setup.receipt, 'setup');
     const weapon = setup.fixture.weapon;
     const key = ['rifle', 'carbine', 'smg', 'shotgun', 'sniper'].includes(weapon) ? 'Digit1' : 'Digit2';
     // Software rendering advances the unchanged simulation slowly on the worker.
@@ -243,6 +258,7 @@ async function runCase(caseId) {
     assert.ok(committedShot.details.rays.length > 0, 'the production shot emitted no ray observations');
     result.observation = assertFirearmRuntimeObservation(setup.fixture, beforeEarlyFire.target, committedShot);
     assertFirearmRuntimeDamageVerdictSupported(result.observation);
+    assertFixtureTargetVisualAlignment(fired.receipt, 'fired');
     assert.equal(
       committedShot.player.ammo.magazine,
       beforeEarlyFire.player.ammo.magazine - 1,

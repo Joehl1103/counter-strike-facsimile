@@ -40,6 +40,10 @@ void test('the firearm runtime fixture is loopback-only, finite, and covers ever
 
 void test('the page observes ordinary actions and keeps the receipt outside visual tools', () => {
   const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const verifier = readFileSync(
+    new URL('../scripts/verify-jkh-131-firearm-runtime.mjs', import.meta.url),
+    'utf8',
+  );
   assert.match(page, /getFirearmRuntimeFixture\(/);
   assert.match(page, /id="jkh-131-firearm-runtime-receipt"/);
   assert.match(page, /recordFirearmRuntimeEvent\(action, 'queued'\)/);
@@ -49,6 +53,12 @@ void test('the page observes ordinary actions and keeps the receipt outside visu
   assert.match(page, /seedObserved: firearmRuntimeSeed/);
   assert.match(page, /applyFirearmRuntimeFixture\(\)/);
   assert.match(page, /enemy === firearmRuntimeFixtureTarget/);
+  assert.match(page, /syncBotRigToAuthority\(target\)/);
+  assert.match(page, /syncBotRigToAuthority\(enemy\)/);
+  assert.match(page, /visualAlignment/);
+  assert.match(verifier, /function assertFixtureTargetVisualAlignment/);
+  assert.match(verifier, /alignment\.distance <= 0\.001/);
+  assert.match(verifier, /alignment\.yawDelta <= 0\.001/);
   assert.match(page, /damageAggregation:/);
   assert.match(page, /shotBasis: firearmRuntimeShotBasis/);
   assert.match(page, /firearmRuntimeFixture \? \[\] : null/);
