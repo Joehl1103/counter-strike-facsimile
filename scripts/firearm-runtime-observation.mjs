@@ -1,5 +1,22 @@
 import assert from 'node:assert/strict';
 
+/** Reject malformed diagnostics before accepting fixture visual alignment. */
+export function assertFixtureTargetVisualAlignment(receipt, stage) {
+  const alignment = receipt?.latest?.target?.visualAlignment;
+  assert.ok(alignment, `${stage} receipt is missing target visual-alignment diagnostics`);
+  assert.equal(alignment.visible, true, `${stage} target visual sibling is hidden`);
+  assert.ok(
+    Number.isFinite(alignment.distance) &&
+      alignment.distance >= 0 && alignment.distance <= 0.001,
+    `${stage} visible target distance is invalid or outside tolerance: ${alignment.distance}`,
+  );
+  assert.ok(
+    Number.isFinite(alignment.yawDelta) &&
+      alignment.yawDelta >= 0 && alignment.yawDelta <= 0.001,
+    `${stage} visible target yaw is invalid or outside tolerance: ${alignment.yawDelta}`,
+  );
+}
+
 // Frozen source-card values. Keep these independent from production damage modules.
 const maximumWallExits = {
   rifle: 1, carbine: 1, deagle: 1, sniper: 2,

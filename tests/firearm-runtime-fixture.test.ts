@@ -5,6 +5,7 @@ import {
   assertFirearmRuntimeObservation,
   assertFirearmRuntimeDamageVerdictSupported,
   assertFirearmEarlyEquipRejection,
+  assertFixtureTargetVisualAlignment,
 } from '../scripts/firearm-runtime-observation.mjs';
 import {
   FIREARM_RUNTIME_FIXTURE_SEED,
@@ -56,12 +57,41 @@ void test('the page observes ordinary actions and keeps the receipt outside visu
   assert.match(page, /syncBotRigToAuthority\(target\)/);
   assert.match(page, /syncBotRigToAuthority\(enemy\)/);
   assert.match(page, /visualAlignment/);
-  assert.match(verifier, /function assertFixtureTargetVisualAlignment/);
-  assert.match(verifier, /alignment\.distance <= 0\.001/);
-  assert.match(verifier, /alignment\.yawDelta <= 0\.001/);
+  assert.match(verifier, /assertFixtureTargetVisualAlignment\(result\.setup\.receipt, 'setup'\)/);
+  assert.match(verifier, /assertFixtureTargetVisualAlignment\(fired\.receipt, 'fired'\)/);
   assert.match(page, /damageAggregation:/);
   assert.match(page, /shotBasis: firearmRuntimeShotBasis/);
   assert.match(page, /firearmRuntimeFixture \? \[\] : null/);
+});
+
+void test('fixture alignment rejects malformed diagnostics and preserves exact tolerances', () => {
+  const receiptWithAlignment = (alignment: Record<string, unknown>) => ({
+    latest: { target: { visualAlignment: alignment } },
+  });
+  const validAlignment = { visible: true, distance: 0, yawDelta: 0 };
+  assert.doesNotThrow(() => assertFixtureTargetVisualAlignment(
+    receiptWithAlignment(validAlignment), 'setup',
+  ));
+  assert.doesNotThrow(() => assertFixtureTargetVisualAlignment(
+    receiptWithAlignment({ visible: true, distance: 0.001, yawDelta: 0.001 }), 'fired',
+  ));
+
+  for (const field of ['distance', 'yawDelta']) {
+    for (const invalidValue of [null, undefined, NaN, Infinity, -Infinity, -0.001, 0.001001, '0', false]) {
+      const invalidReceipt = receiptWithAlignment({ ...validAlignment, [field]: invalidValue });
+      assert.throws(() => assertFixtureTargetVisualAlignment(invalidReceipt, 'setup'));
+      // Browser receipts cross JSON; nonfinite numbers become null there.
+      const serializedReceipt = JSON.parse(JSON.stringify(invalidReceipt));
+      assert.throws(() => assertFixtureTargetVisualAlignment(serializedReceipt, 'fired'));
+    }
+  }
+
+  assert.throws(() => assertFixtureTargetVisualAlignment(
+    receiptWithAlignment({ ...validAlignment, visible: false }), 'setup',
+  ), /hidden/);
+  for (const missingReceipt of [null, {}, { latest: {} }, { latest: { target: {} } }]) {
+    assert.throws(() => assertFixtureTargetVisualAlignment(missingReceipt, 'setup'), /missing/);
+  }
 });
 
 void test('runtime damage acceptance fails closed on unsupported numeric verdicts', () => {

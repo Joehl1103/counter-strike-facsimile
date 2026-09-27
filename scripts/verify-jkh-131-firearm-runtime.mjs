@@ -3,6 +3,7 @@ import {
   assertFirearmRuntimeObservation,
   assertFirearmRuntimeDamageVerdictSupported,
   assertFirearmEarlyEquipRejection,
+  assertFixtureTargetVisualAlignment,
 } from './firearm-runtime-observation.mjs';
 import { platform, release, arch } from 'node:os';
 import { chromium } from 'playwright';
@@ -62,20 +63,6 @@ const report = {
 };
 
 const writeJson = (name, value) => writeFile(join(output, name), JSON.stringify(value, null, 2));
-
-function assertFixtureTargetVisualAlignment(receipt, stage) {
-  const alignment = receipt.latest.target?.visualAlignment;
-  assert.ok(alignment, `${stage} receipt is missing target visual-alignment diagnostics`);
-  assert.equal(alignment.visible, true, `${stage} target visual sibling is hidden`);
-  assert.ok(
-    alignment.distance <= 0.001,
-    `${stage} visible target is ${alignment.distance} scene units from authority`,
-  );
-  assert.ok(
-    alignment.yawDelta <= 0.001,
-    `${stage} visible target yaw differs from authority by ${alignment.yawDelta} radians`,
-  );
-}
 
 async function runCase(caseId) {
   const browser = await chromium.launch({
