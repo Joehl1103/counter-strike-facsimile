@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import { createCharacterRig, applyCharacterRigPose, applyCharacterRigWeaponAim, applyCharacterRigWeaponGripTargets } from '../app/character-rig.ts';
+import { createBotAnimationPose } from '../app/bot-animation.ts';
+
+void test('grip solve refreshes the required paths without traversing unrelated decorative descendants', () => {
+  const parent = new THREE.Group();
+  const rig = createCharacterRig();
+  parent.add(rig.visualRoot);
+  const decoration = new THREE.Object3D();
+  decoration.position.set(3,4,5);
+  rig.visualRoot.add(decoration);
+  let writes = 0;
+  const originalUpdate = decoration.updateMatrix.bind(decoration);
+  decoration.updateMatrix = () => { writes++; originalUpdate(); };
+  const pose = createBotAnimationPose();
+  parent.position.set(7,-3,2);
+  parent.rotation.set(0.2,-0.5,0.1);
+  parent.scale.set(1.2,0.9,1.1);
+  rig.visualRoot.position.set(-2,4,1);
+  applyCharacterRigPose(rig,pose);
+  applyCharacterRigWeaponAim(rig,0.4,pose);
+  const output = {leftElbowPitch:0,rightElbowPitch:0};
+  applyCharacterRigWeaponGripTargets(rig,output);
+  assert.equal(writes,0);
+  assert.ok(Number.isFinite(output.leftElbowPitch) && Number.isFinite(output.rightElbowPitch));
+  parent.updateMatrixWorld(true);
+  assert.equal(writes,1);
+  const expected = decoration.position.clone().applyMatrix4(rig.visualRoot.matrixWorld);
+  const actual = new THREE.Vector3().setFromMatrixPosition(decoration.matrixWorld);
+  assert.ok(expected.distanceTo(actual)<1e-12);
+});

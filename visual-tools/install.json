@@ -1,0 +1,14 @@
+{
+  "spector": {
+    "repository": "https://github.com/BabylonJS/Spector.js",
+    "revision": "d06dc348ccf84884a3a2c1033eae3b38ab55678e"
+  },
+  "blenderMcp": {
+    "version": "1.9.1",
+    "telemetry": false
+  },
+  "context7": {
+    "url": "https://mcp.context7.com/mcp"
+  },
+  "installedAt": "2026-09-15T00:27:54.399Z"
+}

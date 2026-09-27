@@ -25,7 +25,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22.14.0'
+          node-version: '22.23.2'
       - run: node --test .github/scripts/*.test.mjs
       - run: node .github/scripts/ci-policy.mjs
 
@@ -39,7 +39,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22.14.0'
+          node-version: '22.23.2'
       - name: Validate project and run game checks when imported
         shell: bash
         run: |

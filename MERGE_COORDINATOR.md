@@ -111,6 +111,14 @@ No issue is automatically closed and no hosting deployment is included.
 
 ## Activation and verification
 
+The 22-file workflow-only bootstrap was published on 2026-09-17 as remote main
+`2d5ff1e26a0922bfc8218899c27fdc4d7e757598`. It excludes game source, original
+history, raw assets and the retained archive. At that bootstrap, strict ruleset
+23595815 was active; current private-plan enforcement limits are described above.
+Initial CI and empty-queue coordinator startup passed. Those runs do not
+establish PR review, update or merge behavior. The bootstrap record includes the reviewer environment
+credential; the repository duplicate was removed. See the current [activation record](AUTO_MERGE_SETUP.md).
+
 This bootstrap excludes game code, raw assets, private history and local archives.
 When the repository plan supports rules, apply
 [.github/main-ruleset.json](.github/main-ruleset.json) after initial main is

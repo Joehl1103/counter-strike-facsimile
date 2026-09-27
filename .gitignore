@@ -1,5 +1,65 @@
-node_modules/
-.next/
-outputs/
-.local-archive/
-.env*
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing and generated output
+/coverage
+/.next/
+/.vinext/
+/out/
+/dist/
+/.wrangler/
+/outputs/
+/work/
+*.tsbuildinfo
+
+# local environment and debug output
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local agent worktrees and tooling
+/.worktrees/
+/.tools/
+
+# Raw authoring packs stay in private local storage; never commit them.
+/assets/source/
+
+# Downloaded authoring tools and unselected source packs; provenance stays local.
+/assets/source/mpfb/vendor/
+/assets/source/mpfb/*.zip
+/assets/source/mpfb/packs/*.zip
+/assets/source/mpfb/packs/makehuman_system_assets/
+/assets/source/mpfb/packs/suits03/
+/assets/source/mpfb/packs/gloves01/
+/assets/source/mpfb/packs/hats02/
+/assets/source/mpfb/packs/masks01/
+/assets/source/mpfb/packs/masks02/
+/assets/source/mpfb/packs/shoes01/
+/assets/source/mpfb/packs/equipment03/
+/assets/source/stein-classic-weapons/*.zip
+/assets/source/stein-classic-weapons/original/
+/assets/source/tabasco-smallarms/*.zip
+/assets/source/tabasco-smallarms/original/
+*.blend1
+
+# Python authoring caches and retired coordination cursor
+__pycache__/
+*.py[cod]
+/BUZZ_MESSAGE_LOG.jsonl
+
+# Private retained checkout, unfinished work and evidence; never publish.
+/.local-archive/
