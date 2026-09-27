@@ -16,6 +16,10 @@ const pageSource = readFileSync(
   new URL('../app/page.tsx', import.meta.url),
   'utf8',
 );
+const worldFirearmSource = readFileSync(
+  new URL('../app/world-firearm-models.ts', import.meta.url),
+  'utf8',
+);
 const protocolSource = readFileSync(
   new URL('../QA_PROTOCOL.md', import.meta.url),
   'utf8',
@@ -134,22 +138,30 @@ void test('round-two active weapons and six worst-case drops fit the unchanged d
 });
 
 void test('production primary world factory uses one owned palette and batches before return', () => {
-  const factory = pageSource.slice(
-    pageSource.indexOf('const createWorldFirearmModel ='),
-    pageSource.indexOf(
-      'const hitMeshes:',
-      pageSource.indexOf('const createWorldFirearmModel ='),
-    ),
+  assert.match(
+    pageSource,
+    /createSharedWorldFirearmModel\(kind, \{\s*materials: worldFirearmMaterials,/
   );
-  for (const role of ['metal', 'wood', 'polymer'])
-    assert.ok(factory.includes(`worldFirearmMaterials.${role}.clone()`));
-  assert.match(factory, /createPrimaryWorldModel\(kind, materials\)/);
+  assert.match(
+    worldFirearmSource,
+    /const metalMaterial = options\.materials\.metal\.clone\(\);/,
+  );
+  for (const role of ['wood', 'polymer']) {
+    assert.ok(
+      worldFirearmSource.includes(`options.materials.${role}.clone()`),
+    );
+  }
+  assert.match(
+    worldFirearmSource,
+    /kind === 'sniper'\s*\? options\.materials\.accent\.clone\(\)\s*: metalMaterial/,
+  );
+  assert.match(worldFirearmSource, /createPrimaryWorldModel\(kind, primaryMaterials\)/);
   assert.doesNotMatch(
-    factory,
+    worldFirearmSource,
     /(?:rifleDark|rifleWood|riflePolymer|gunHighlight)\.clone\(\)/,
   );
   assert.match(
-    factory,
+    worldFirearmSource,
     /batchPrimaryWorldFirearmVisuals\(root, kind\);\s*return root;/,
   );
 });

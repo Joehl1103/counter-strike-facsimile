@@ -128,7 +128,6 @@ import {
 } from './equipment-viewmodel-visuals';
 import {
   createSecondaryFirstPersonModel,
-  createSecondaryWorldModel,
   SECONDARY_VIEWMODEL_FIRST_PERSON_MOUNTS,
   type ProceduralSecondaryFirstPersonKind,
   type SecondaryFirstPersonModel,
@@ -148,7 +147,6 @@ import {
 } from './authored-pistol-viewmodel';
 import {
   createPrimaryFirstPersonModel,
-  createPrimaryWorldModel,
   PRIMARY_VIEWMODEL_FIRST_PERSON_MOUNTS,
   PRIMARY_WEAPON_KINDS,
   type PrimaryWeaponActionParts,

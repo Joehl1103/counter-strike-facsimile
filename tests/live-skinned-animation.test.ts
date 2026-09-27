@@ -1,23 +1,20 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const pageSource = process.env.LIVE_SKINNED_PAGE_REVISION
-  ? execFileSync(
-      'git',
-      ['show', `${process.env.LIVE_SKINNED_PAGE_REVISION}:app/page.tsx`],
-      { encoding: 'utf8' },
-    )
-  : readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+const pageSource = readFileSync(
+  new URL('../app/page.tsx', import.meta.url),
+  'utf8',
+);
+const sharedPresentationSource = readFileSync(
+  new URL('../app/bot-presentation.ts', import.meta.url),
+  'utf8',
+);
 
 const presentationStart = 'const applyBotAnimationPresentation =';
 const presentationEnd = 'const captureBotDeathJoint =';
 const simulationStart = 'const clock = (wallNow: number) =>';
 const simulationEnd = 'const loadedBudgetTimer =';
-const samplingCall = `sampleSkinnedCharacterPose(bot.skinned, bot.animationPose, {
-        elapsedSeconds: simulationNowMs / 1000,
-      });`;
 
 function sourceBetween(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);
@@ -27,11 +24,19 @@ function sourceBetween(source: string, start: string, end: string): string {
   return source.slice(startIndex, endIndex);
 }
 
-function assertVisibleSkeletonSampling(source: string): void {
+function assertVisibleSkeletonSampling(
+  source: string,
+  presentationSource: string,
+): void {
+  assert.match(
+    presentationSource,
+    /applyCharacterRigPose\(bot\.rig, bot\.animationPose\);[\s\S]*?sampleSkinnedCharacterPose\(bot\.skinned, bot\.animationPose, \{\s*elapsedSeconds,\s*\}\);/,
+  );
+
   const presentation = sourceBetween(source, presentationStart, presentationEnd);
   assert.match(
     presentation,
-    /applyCharacterRigPose\(bot\.rig, bot\.animationPose\);[\s\S]*?sampleSkinnedCharacterPose\(bot\.skinned, bot\.animationPose, \{\s*elapsedSeconds: simulationNowMs \/ 1000,\s*\}\);/,
+    /presentBotAnimation\([\s\S]*?simulationNowMs \/ 1000,\s*\);/,
   );
 
   const liveSimulation = sourceBetween(source, simulationStart, simulationEnd);
@@ -56,41 +61,58 @@ function removeOnce(source: string, target: string): string {
 }
 
 function removePresentationSampling(source: string): string {
-  const startIndex = source.indexOf(presentationStart);
-  const endIndex = source.indexOf(presentationEnd, startIndex);
-  const callIndex = source.indexOf(samplingCall, startIndex);
-  assert.ok(
-    callIndex >= startIndex && callIndex < endIndex,
-    'presentation sampling call missing',
-  );
-  return source.slice(0, callIndex) + source.slice(callIndex + samplingCall.length);
+  const callStart = source.indexOf('sampleSkinnedCharacterPose(');
+  const callEnd = source.indexOf('});', callStart) + 3;
+  assert.ok(callStart >= 0, 'presentation sampling call missing');
+  assert.ok(callEnd > callStart, 'presentation sampling call end missing');
+  return source.slice(0, callStart) + source.slice(callEnd);
 }
 
 void test('live common bot presentation samples the visible skinned body for both teams', () => {
-  assertVisibleSkeletonSampling(pageSource);
+  assertVisibleSkeletonSampling(pageSource, sharedPresentationSource);
 });
 
 void test(
-  'regression controls reject the frozen skeleton and either missing team loop',
-  {
-    skip: !sourceBetween(pageSource, presentationStart, presentationEnd).includes(
-      samplingCall,
-    ),
-  },
+  'regression controls reject missing sampling, delegation, or team loops',
   () => {
-  const frozenSkeletonControl = removePresentationSampling(pageSource);
-  assert.throws(() => assertVisibleSkeletonSampling(frozenSkeletonControl));
+    const frozenSkeletonControl = removePresentationSampling(
+      sharedPresentationSource,
+    );
+    assert.throws(() => {
+      assertVisibleSkeletonSampling(pageSource, frozenSkeletonControl);
+    });
 
-  const missingEnemyLoopControl = removeOnce(
-    pageSource,
-    'applyBotAnimationPresentation(enemy, dt);',
-  );
-  assert.throws(() => assertVisibleSkeletonSampling(missingEnemyLoopControl));
+    const missingDelegationControl = removeOnce(
+      pageSource,
+      'presentBotAnimation(',
+    );
+    assert.throws(() => {
+      assertVisibleSkeletonSampling(
+        missingDelegationControl,
+        sharedPresentationSource,
+      );
+    });
 
-  const missingAllyLoopControl = removeOnce(
-    pageSource,
-    'applyBotAnimationPresentation(ally, dt);',
-  );
-  assert.throws(() => assertVisibleSkeletonSampling(missingAllyLoopControl));
+    const missingEnemyLoopControl = removeOnce(
+      pageSource,
+      'applyBotAnimationPresentation(enemy, dt);',
+    );
+    assert.throws(() => {
+      assertVisibleSkeletonSampling(
+        missingEnemyLoopControl,
+        sharedPresentationSource,
+      );
+    });
+
+    const missingAllyLoopControl = removeOnce(
+      pageSource,
+      'applyBotAnimationPresentation(ally, dt);',
+    );
+    assert.throws(() => {
+      assertVisibleSkeletonSampling(
+        missingAllyLoopControl,
+        sharedPresentationSource,
+      );
+    });
   },
 );

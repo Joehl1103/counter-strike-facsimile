@@ -6,6 +6,10 @@ const pageSource = readFileSync(
   new URL('../app/page.tsx', import.meta.url),
   'utf8',
 );
+const presentationSource = readFileSync(
+  new URL('../app/bot-presentation.ts', import.meta.url),
+  'utf8',
+);
 
 /**
  * Keep these checks resilient to formatting and line movement. The page is a
@@ -74,17 +78,18 @@ void test('player hitscan and grenade aim read the gameplay camera', () => {
   assert.doesNotMatch(throwGrenade, /presentationCamera\./);
 });
 
-void test('normal bot presentation uses a sibling rig while legacy leg pivots remain before matrix update', () => {
+void test('normal bot presentation syncs the sibling rig before each team traversal', () => {
   const animation = sourceBetween(
     'const applyBotAnimationPresentation =',
     'const captureBotDeathPresentation =',
   );
-  assert.match(animation, /syncBotRigToAuthority\(bot\)/);
+  assert.match(animation, /presentBotAnimation\(/);
   assert.match(
-    animation,
-    /applyCharacterRigPose\(bot\.rig, bot\.animationPose\)/,
+    presentationSource,
+    /bot\.skinned\.visualRoot\.position\.copy\(bot\.root\.position\)/,
   );
-  assert.match(animation, /applyCharacterRigWeaponAim\(\s*bot\.rig,/);
+  assert.match(presentationSource, /applyCharacterRigPose\(bot\.rig, bot\.animationPose\)/);
+  assert.match(presentationSource, /applyCharacterRigWeaponAim\(bot\.rig,/);
 
   for (const bot of ['enemy', 'ally']) {
     const loop = sourceBetween(
@@ -151,45 +156,27 @@ void test('bot death pose mutates only the visual sibling and preserves the auth
   }
 });
 
-void test('normal bot animation passes one retained grip output through the grip and deformation APIs', () => {
-  const animation = sourceBetween(
-    'const applyBotAnimationPresentation =',
-    'const captureBotDeathPresentation =',
-  );
-  const pose = indexOfOrFail(animation, 'applyCharacterRigPose(');
-  const aim = indexOfOrFail(animation, 'applyCharacterRigWeaponAim(');
+void test('normal bot animation retains the shared grip output and samples the visible skeleton', () => {
+  const pose = indexOfOrFail(presentationSource, 'writeBotAnimationPose(');
+  const rig = indexOfOrFail(presentationSource, 'applyCharacterRigPose(');
+  const aim = indexOfOrFail(presentationSource, 'applyCharacterRigWeaponAim(');
   const grip = indexOfOrFail(
-    animation,
+    presentationSource,
     'applyCharacterRigWeaponGripTargets(bot.rig, bot.weaponGripOutput);',
   );
-  const leftLeg = indexOfOrFail(
-    animation,
-    'bot.leftLegDeformationController.write(',
-  );
-  const rightLeg = indexOfOrFail(
-    animation,
-    'bot.rightLegDeformationController.write(',
-  );
-  const leftArm = indexOfOrFail(
-    animation,
-    'bot.leftArmDeformationController.write(',
-  );
-  const rightArm = indexOfOrFail(
-    animation,
-    'bot.rightArmDeformationController.write(',
+  const sample = indexOfOrFail(
+    presentationSource,
+    'sampleSkinnedCharacterPose(bot.skinned, bot.animationPose,',
   );
 
-  assert.ok(aim > pose);
+  assert.ok(rig > pose);
+  assert.ok(aim > rig);
   assert.ok(grip > aim);
-  assert.ok(leftLeg > grip);
-  assert.ok(rightLeg > leftLeg);
-  assert.ok(leftArm > rightLeg);
-  assert.ok(rightArm > leftArm);
-  assert.match(animation, /elbow:\s*bot\.weaponGripOutput\.leftElbowPitch/);
-  assert.match(animation, /elbow:\s*bot\.weaponGripOutput\.rightElbowPitch/);
+  assert.ok(sample > grip);
+  assert.match(pageSource, /weaponGripOutput:\s*CharacterRigWeaponGripOutput/);
   assert.doesNotMatch(
-    animation,
-    /applyCharacterRigWeaponGripTargets\([^,]+,\s*\{/,
+    pageSource,
+    /createCharacterLimbDeformationController|writeCharacterLimbFootPlanting/,
   );
 
   const enemyCreation = sourceBetween(
@@ -197,14 +184,6 @@ void test('normal bot animation passes one retained grip output through the grip
     'enemyHitGroups.forEach',
   );
   assert.match(enemyCreation, /weaponGripOutput:\s*\{/);
-  assert.match(pageSource, /weaponGripOutput:\s*CharacterRigWeaponGripOutput/);
-  const preparedPelvis = indexOfOrFail(animation, 'bot.rig.pelvis.updateWorldMatrix(true, false);');
-  assert.ok(grip < preparedPelvis && preparedPelvis < leftLeg);
-  assert.match(animation, /bot\.rig\.leftThigh\.updateWorldMatrix\(false, false\);/);
-  assert.match(animation, /bot\.rig\.rightThigh\.updateWorldMatrix\(false, false\);/);
-  assert.match(animation, /toeClearance: bot\.animationPose\.leftToeClearance,\s*}, true\);/);
-  assert.match(animation, /toeClearance: bot\.animationPose\.rightToeClearance,\s*}, true\);/);
-
 });
 
 void test('movement visual QA is wired through the localhost-gated preset', () => {

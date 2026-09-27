@@ -104,7 +104,10 @@ void test('page commits bot body motion once per tick and propagates actual supp
   assert.match(shared, /feet < other.root.position.y \+ PLAYER_HULL.standingHeight/);
   assert.match(shared, /player.crouched \? PLAYER_HULL.crouchedHeight : PLAYER_HULL.standingHeight/);
   assert.equal((shared.match(/< 0.82/g) ?? []).length, 2);
-  assert.match(shared, /if \(enemy.motionResolvedThisTick\) return 0;\s*enemy.motionResolvedThisTick = true;/);
+  assert.match(
+    shared,
+    /if \(enemy\.motionResolvedThisTick\) \{\s*return 0;\s*\}\s*enemy\.motionResolvedThisTick = true;/,
+  );
   assert.doesNotMatch(shared, /root.position.y = getMapGroundHeight|const enemyCollides/);
   const recovery = shared.slice(shared.indexOf('for (const direction of directions)'), shared.indexOf('if (!acceptedMotion)'));
   assert.match(recovery, /probeBotMotion\(enemy, movement.velocity, dt\)/);

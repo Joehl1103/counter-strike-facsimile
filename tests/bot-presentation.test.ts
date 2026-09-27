@@ -201,27 +201,30 @@ function quaternionsMatch(
   return Math.min(directDifference, oppositeDifference) <= COMPARE_TOLERANCE;
 }
 
-test('quaternion equivalence handles equal non-unit and sign-opposite values', () => {
-  const rotation = new THREE.Quaternion(0.2, -0.3, 0.1, 0.9);
-  const identicalNonUnitRotation = rotation.clone();
-  const signOppositeRotation = new THREE.Quaternion(
-    -rotation.x,
-    -rotation.y,
-    -rotation.z,
-    -rotation.w,
-  );
-  const differentRotationScale = rotation.length();
-  const differentRotation = new THREE.Quaternion(
-    0,
-    Math.sin(0.1) * differentRotationScale,
-    0,
-    Math.cos(0.1) * differentRotationScale,
-  );
+void test(
+  'quaternion equivalence handles equal non-unit and sign-opposite values',
+  () => {
+    const rotation = new THREE.Quaternion(0.2, -0.3, 0.1, 0.9);
+    const identicalNonUnitRotation = rotation.clone();
+    const signOppositeRotation = new THREE.Quaternion(
+      -rotation.x,
+      -rotation.y,
+      -rotation.z,
+      -rotation.w,
+    );
+    const differentRotationScale = rotation.length();
+    const differentRotation = new THREE.Quaternion(
+      0,
+      Math.sin(0.1) * differentRotationScale,
+      0,
+      Math.cos(0.1) * differentRotationScale,
+    );
 
-  assert.ok(quaternionsMatch(rotation, identicalNonUnitRotation));
-  assert.ok(quaternionsMatch(rotation, signOppositeRotation));
-  assert.equal(quaternionsMatch(rotation, differentRotation), false);
-});
+    assert.ok(quaternionsMatch(rotation, identicalNonUnitRotation));
+    assert.ok(quaternionsMatch(rotation, signOppositeRotation));
+    assert.equal(quaternionsMatch(rotation, differentRotation), false);
+  },
+);
 
 function assertFixtureOutputsMatch(
   current: PresentationFixture,
@@ -240,31 +243,25 @@ function assertFixtureOutputsMatch(
     assert.deepEqual(currentBot.weaponGripTargets, legacyBot.weaponGripTargets);
     assert.equal(currentBot.weaponKind, legacyBot.weaponKind);
 
-    const expectedDominantGrip = new THREE.Vector3(
-      ...currentBot.weaponGripTargets.dominant,
-    );
-    const expectedSupportGrip = new THREE.Vector3(
-      ...currentBot.weaponGripTargets.support,
-    );
     assertVectorClose(
       currentBot.rig.dominantGripTarget.position,
-      expectedDominantGrip,
+      legacyBot.rig.dominantGripTarget.position,
       'procedural rig dominant grip target',
     );
     assertVectorClose(
       currentBot.rig.supportGripTarget.position,
-      expectedSupportGrip,
+      legacyBot.rig.supportGripTarget.position,
       'procedural rig support grip target',
     );
     assertVectorClose(
       currentBot.skinned.dominantGripTarget.position,
-      expectedDominantGrip,
-      'skinned dominant grip target',
+      legacyBot.skinned.dominantGripTarget.position,
+      'animated skinned dominant grip target',
     );
     assertVectorClose(
       currentBot.skinned.supportGripTarget.position,
-      expectedSupportGrip,
-      'skinned support grip target',
+      legacyBot.skinned.supportGripTarget.position,
+      'animated skinned support grip target',
     );
 
     assertVectorClose(
@@ -336,6 +333,38 @@ function assertFixtureOutputsMatch(
   }
 }
 
+function assertInitialWeaponGripTargets(fixture: PresentationFixture): void {
+  for (const bot of fixture.bots) {
+    const expectedDominantGrip = new THREE.Vector3(
+      ...bot.weaponGripTargets.dominant,
+    );
+    const expectedSupportGrip = new THREE.Vector3(
+      ...bot.weaponGripTargets.support,
+    );
+
+    assertVectorClose(
+      bot.rig.dominantGripTarget.position,
+      expectedDominantGrip,
+      'initial procedural rig dominant grip target',
+    );
+    assertVectorClose(
+      bot.rig.supportGripTarget.position,
+      expectedSupportGrip,
+      'initial procedural rig support grip target',
+    );
+    assertVectorClose(
+      bot.skinned.dominantGripTarget.position,
+      expectedDominantGrip,
+      'initial skinned dominant grip target',
+    );
+    assertVectorClose(
+      bot.skinned.supportGripTarget.position,
+      expectedSupportGrip,
+      'initial skinned support grip target',
+    );
+  }
+}
+
 void test('retiring hidden deformation buffers preserves current visible bot presentation', async () => {
   const current = await createBotPresentationFixture();
   const legacy = await createBotPresentationFixture({
@@ -344,16 +373,24 @@ void test('retiring hidden deformation buffers preserves current visible bot pre
 
   try {
     assert.deepEqual(current.assetEvidence, legacy.assetEvidence);
+    assertInitialWeaponGripTargets(current);
+    assertInitialWeaponGripTargets(legacy);
     const pageSource = readFileSync(
       new URL('../app/page.tsx', import.meta.url),
       'utf8',
     );
-    assert.match(pageSource, /presentBotAnimation\(/);
+    const presentation = pageSource.slice(
+      pageSource.indexOf('const applyBotAnimationPresentation ='),
+      pageSource.indexOf('const captureBotDeathJoint ='),
+    );
+    assert.match(
+      presentation,
+      /presentBotAnimation\([\s\S]*?simulationNowMs \/ 1000,\s*\);/,
+    );
     assert.doesNotMatch(
       pageSource,
       /createCharacterLimbDeformationController|writeCharacterLimbFootPlanting/,
     );
-    assert.match(pageSource, /elapsedSeconds: simulationNowMs \/ 1000/);
     const inputs = [
       {
         ...current.bots[0].input,

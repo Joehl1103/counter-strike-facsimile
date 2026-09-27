@@ -5,6 +5,11 @@ import { stepBotSilencer, stepBotScope } from '../app/bot-weapon-actions.ts';
 import { createWeaponSpecialActions } from '../app/weapon-special-actions.ts';
 import { tracePenetratingBullet } from '../app/weapon-penetration.ts';
 
+const worldFirearmSource = readFileSync(
+  new URL('../app/world-firearm-models.ts', import.meta.url),
+  'utf8',
+);
+
 const quiet = { weapon: 'usp' as const, now: 0, active: true, alive: true, direct: false,
   memorySeconds: 0, reloadSeconds: 0, utilityActive: false, objectiveLocked: false, fireCooldown: 0 };
 
@@ -78,7 +83,10 @@ void test('page connects both bot silencer policies to one shot mode and aligned
   assert.match(page, /engineSettingsRef.current.volume \* \(silenced \? 0.35 : 1\)/);
   const flash = page.slice(page.indexOf('const emitBotMuzzleFlash ='), page.indexOf('const setEnemyPrimaryModel ='));
   assert.match(flash, /if \(silenced\) \{[\s\S]*bot.muzzleFlash.intensity = 0;[\s\S]*muzzle.intensity = 0;[\s\S]*return;/);
-  assert.match(page, /root.userData.silencerSocket = root.children\[0\].userData.silencerSocket/);
+  assert.match(
+    worldFirearmSource,
+    /root\.userData\.silencerSocket = root\.children\[0\]\.userData\.silencerSocket/,
+  );
   assert.match(page, /model.worldToLocal\(object.getWorldPosition\(new THREE.Vector3\(\)\)\)/);
   assert.match(page, /bot.silencerModels\[kind\].visible = bot.special.isSilenced\(kind\)/);
   assert.match(page, /mesh.raycast = \(\) => undefined/);
