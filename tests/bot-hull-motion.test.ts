@@ -98,6 +98,10 @@ void test('shared motion handles ceiling contact, invalid numeric inputs and zer
 
 void test('page commits bot body motion once per tick and propagates actual support state', () => {
   const page = readFileSync(process.env.CS16_BOT_HULL_PAGE ?? new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const presentationSource = readFileSync(
+    new URL('../app/bot-presentation.ts', import.meta.url),
+    'utf8',
+  );
   const shared = page.slice(page.indexOf('const getBotCollisionWorld ='), page.indexOf('const getBallisticPose ='));
   assert.match(shared, /stepCharacterMotion\(/);
   assert.match(shared, /other !== bot && other.alive/);
@@ -106,22 +110,55 @@ void test('page commits bot body motion once per tick and propagates actual supp
   assert.equal((shared.match(/< 0.82/g) ?? []).length, 2);
   assert.match(
     shared,
-    /if \(enemy\.motionResolvedThisTick\) \{\s*return 0;\s*\}\s*enemy\.motionResolvedThisTick = true;/,
+    /if \(enemy\.motionResolvedThisTick\) return 0;\s*enemy\.motionResolvedThisTick = true;/,
   );
   assert.doesNotMatch(shared, /root.position.y = getMapGroundHeight|const enemyCollides/);
   const recovery = shared.slice(shared.indexOf('for (const direction of directions)'), shared.indexOf('if (!acceptedMotion)'));
   assert.match(recovery, /probeBotMotion\(enemy, movement.velocity, dt\)/);
   assert.doesNotMatch(recovery, /root.position\.[xyz] =|commitBotMotion\(/);
   assert.match(shared, /!waypoint \|\| isAtBotWaypoint/);
-  for (const bot of ['enemy', 'ally']) {
-    assert.match(page, new RegExp(`if \\(status !== 'active' \\|\\| !${bot}.alive\\) return;\\s*${bot}.motionResolvedThisTick = false;`));
-    assert.match(page, new RegExp(`grounded: ${bot}.grounded,`));
-  }
   const live = page.slice(page.indexOf('const runSimulationTick ='));
+  const enemyLoopStart = live.indexOf('enemies.forEach((enemy) => {');
+  const enemyLoopEnd = live.indexOf('let activeAllyShooters', enemyLoopStart);
+  assert.ok(enemyLoopStart >= 0, 'missing enemy simulation loop');
+  assert.ok(enemyLoopEnd > enemyLoopStart, 'missing ally simulation boundary');
+  const enemyLoop = live.slice(enemyLoopStart, enemyLoopEnd);
+  const enemyActiveGuard = "if (status !== 'active' || !enemy.alive) return;";
+  const enemyFixtureGuard = 'enemy === firearmRuntimeFixtureTarget';
+  const enemyMotionReset = 'enemy.motionResolvedThisTick = false;';
+  assert.ok(enemyLoop.indexOf(enemyActiveGuard) >= 0);
+  assert.ok(enemyLoop.indexOf(enemyFixtureGuard) > enemyLoop.indexOf(enemyActiveGuard));
+  assert.ok(enemyLoop.indexOf(enemyMotionReset) > enemyLoop.indexOf(enemyFixtureGuard));
+  const fixtureBranch = enemyLoop.slice(
+    enemyLoop.indexOf(enemyFixtureGuard),
+    enemyLoop.indexOf(enemyMotionReset),
+  );
+  assert.match(
+    fixtureBranch,
+    /enemy\.root\.updateMatrixWorld\(true\);\s*return;\s*\}\s*$/,
+  );
+
+  const allyLoopStart = live.indexOf('allies.forEach((ally) => {');
+  const allyLoopEnd = live.indexOf('resolveTeamElimination();', allyLoopStart);
+  assert.ok(allyLoopStart >= 0, 'missing ally simulation loop');
+  assert.ok(allyLoopEnd > allyLoopStart, 'missing simulation resolution boundary');
+  const allyLoop = live.slice(allyLoopStart, allyLoopEnd);
+  const allyActiveGuard = "if (status !== 'active' || !ally.alive) return;";
+  const allyMotionReset = 'ally.motionResolvedThisTick = false;';
+  assert.ok(allyLoop.indexOf(allyActiveGuard) >= 0);
+  assert.ok(allyLoop.indexOf(allyMotionReset) > allyLoop.indexOf(allyActiveGuard));
+
+  for (const bot of ['enemy', 'ally']) {
+    assert.match(page, new RegExp(`grounded: ${bot}\\.grounded,`));
+  }
   assert.doesNotMatch(live, /(?:enemy|ally).root.position.y = getMapGroundHeight/);
   assert.match(page, /grounded: bot.grounded, crouching: false, speed/);
   const animation = page.slice(page.indexOf('const applyBotAnimationPresentation ='), page.indexOf('const captureBotDeathJoint ='));
   assert.match(animation, /grounded: bot.grounded/);
-  assert.equal((animation.match(/groundY: bot.root.position.y/g) ?? []).length, 2);
+  assert.match(animation, /presentBotAnimation\(/);
+  assert.match(
+    presentationSource,
+    /writeBotAnimationPose\(input, bot\.animationState, bot\.animationPose\);/,
+  );
   assert.match(page, /const emitBotHearingFootstep = \(bot: Enemy\) => \{\s*if \(!bot.grounded\) return/);
 });

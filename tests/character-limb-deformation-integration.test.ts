@@ -68,17 +68,40 @@ void test('shared normal presentation preserves pose, aim, grip and skinned samp
   );
 });
 
-void test('page disposes shared faceted source geometry once without output clones', () => {
+void test('generic scene cleanup disposes shared faceted mesh geometry', () => {
   assert.doesNotMatch(
     pageSource,
     /createCharacterLimbDeformationController|writeCharacterLimbFootPlanting|characterLimbOutputGeometries/,
   );
-  assert.equal(
-    (pageSource.match(/facetedLegGeometry\.dispose\(\)/g) ?? []).length,
-    1,
+  const cleanupStart = pageSource.lastIndexOf('scene.traverse((object) => {');
+  const cleanupEnd = pageSource.indexOf(
+    'texturedViewmodelArmFactory.dispose();',
+    cleanupStart,
   );
-  assert.equal(
-    (pageSource.match(/facetedArmGeometry\.dispose\(\)/g) ?? []).length,
-    1,
+  assert.ok(cleanupStart >= 0, 'missing generic scene cleanup');
+  assert.ok(cleanupEnd > cleanupStart, 'missing viewmodel factory cleanup');
+  const cleanup = pageSource.slice(cleanupStart, cleanupEnd);
+
+  assert.match(
+    cleanup,
+    /if \(!\(object instanceof THREE\.Mesh\)\) return;/,
+  );
+  assert.match(
+    cleanup,
+    /!texturedViewmodelArmFactory\.ownsGeometry\(object\.geometry\)[\s\S]*object\.geometry\.dispose\(\);/,
+  );
+  assert.doesNotMatch(cleanup, /faceted(?:Leg|Arm)Geometry\.dispose\(\)/);
+
+  const createEnemySource = sourceBetween(
+    'const createEnemy =',
+    'const backupCallTargets =',
+  );
+  assert.match(
+    createEnemySource,
+    /new THREE\.Mesh\(\s*facetedLegGeometry,/,
+  );
+  assert.match(
+    createEnemySource,
+    /new THREE\.Mesh\(\s*facetedArmGeometry,/,
   );
 });

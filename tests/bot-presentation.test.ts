@@ -29,6 +29,43 @@ const COMPARE_TOLERANCE = 1e-6;
 const WORLD_POSITION = new THREE.Vector3();
 const SKINNED_VERTEX = new THREE.Vector3();
 
+type WeaponGripTargets = Readonly<{
+  dominant: readonly [number, number, number];
+  support: readonly [number, number, number];
+}>;
+
+const PROCEDURAL_INITIAL_GRIP_TARGETS: Readonly<
+  Record<PresentationFixtureBot['weaponKind'], WeaponGripTargets>
+> = {
+  rifle: { dominant: [-0.07, 0.071, 0.141], support: [-0.07, 0.11, -0.089] },
+  carbine: { dominant: [-0.07, 0.073, 0.139], support: [-0.07, 0.112, -0.086] },
+  smg: { dominant: [-0.07, 0.078, 0.129], support: [-0.07, 0.11, -0.088] },
+  shotgun: { dominant: [-0.07, 0.071, 0.141], support: [-0.07, 0.124, -0.268] },
+  sniper: { dominant: [-0.07, 0.065, 0.129], support: [-0.07, 0.122, -0.177] },
+  glock18: { dominant: [-0.07, 0.081, 0.132], support: [-0.01, 0.1, 0.09] },
+  usp: { dominant: [-0.07, 0.081, 0.132], support: [-0.01, 0.1, 0.09] },
+  p228: { dominant: [-0.07, 0.081, 0.132], support: [-0.01, 0.1, 0.09] },
+  deagle: { dominant: [-0.07, 0.075, 0.132], support: [-0.01, 0.1, 0.09] },
+  fiveseven: { dominant: [-0.07, 0.081, 0.132], support: [-0.01, 0.1, 0.09] },
+  elite: { dominant: [-0.16, 0.081, 0.132], support: [0.02, 0.1, 0.09] },
+};
+
+const SKINNED_INITIAL_GRIP_TARGETS: Readonly<
+  Record<PresentationFixtureBot['weaponKind'], WeaponGripTargets>
+> = {
+  rifle: { dominant: [-0.07, 0.071, 0.141], support: [-0.07, 0.11, -0.089] },
+  carbine: { dominant: [-0.07, 0.073, 0.139], support: [-0.07, 0.112, -0.086] },
+  smg: { dominant: [-0.07, 0.078, 0.129], support: [-0.07, 0.11, -0.088] },
+  shotgun: { dominant: [-0.07, 0.071, 0.141], support: [-0.13, 0.124, -0.18] },
+  sniper: { dominant: [-0.07, 0.065, 0.129], support: [-0.13, 0.122, -0.177] },
+  glock18: { dominant: [-0.07, 0.081, 0.132], support: [-0.01, 0.1, 0.09] },
+  usp: { dominant: [-0.07, 0.081, 0.132], support: [-0.01, 0.1, 0.09] },
+  p228: { dominant: [-0.07, 0.081, 0.132], support: [-0.01, 0.1, 0.09] },
+  deagle: { dominant: [-0.07, 0.075, 0.132], support: [-0.01, 0.1, 0.09] },
+  fiveseven: { dominant: [-0.07, 0.081, 0.132], support: [-0.01, 0.1, 0.09] },
+  elite: { dominant: [-0.16, 0.081, 0.132], support: [-0.02, 0.1, 0.09] },
+};
+
 function applyCurrentFrame(
   bot: PresentationFixtureBot,
   input: PresentationFixtureBot['input'],
@@ -335,31 +372,39 @@ function assertFixtureOutputsMatch(
 
 function assertInitialWeaponGripTargets(fixture: PresentationFixture): void {
   for (const bot of fixture.bots) {
-    const expectedDominantGrip = new THREE.Vector3(
-      ...bot.weaponGripTargets.dominant,
+    const proceduralTargets = PROCEDURAL_INITIAL_GRIP_TARGETS[bot.weaponKind];
+    const skinnedTargets = SKINNED_INITIAL_GRIP_TARGETS[bot.weaponKind];
+    const expectedProceduralDominantGrip = new THREE.Vector3(
+      ...proceduralTargets.dominant,
     );
-    const expectedSupportGrip = new THREE.Vector3(
-      ...bot.weaponGripTargets.support,
+    const expectedProceduralSupportGrip = new THREE.Vector3(
+      ...proceduralTargets.support,
+    );
+    const expectedSkinnedDominantGrip = new THREE.Vector3(
+      ...skinnedTargets.dominant,
+    );
+    const expectedSkinnedSupportGrip = new THREE.Vector3(
+      ...skinnedTargets.support,
     );
 
     assertVectorClose(
       bot.rig.dominantGripTarget.position,
-      expectedDominantGrip,
+      expectedProceduralDominantGrip,
       'initial procedural rig dominant grip target',
     );
     assertVectorClose(
       bot.rig.supportGripTarget.position,
-      expectedSupportGrip,
+      expectedProceduralSupportGrip,
       'initial procedural rig support grip target',
     );
     assertVectorClose(
       bot.skinned.dominantGripTarget.position,
-      expectedDominantGrip,
+      expectedSkinnedDominantGrip,
       'initial skinned dominant grip target',
     );
     assertVectorClose(
       bot.skinned.supportGripTarget.position,
-      expectedSupportGrip,
+      expectedSkinnedSupportGrip,
       'initial skinned support grip target',
     );
   }
