@@ -47,7 +47,7 @@ Asset redistribution terms recorded in the adjacent `SOURCE.md` notes remain
 open for some runtime assets. See [AUTO_MERGE_SETUP.md](AUTO_MERGE_SETUP.md)
 for delivery-workflow status.
 
-The latest game-source checks cover recovery commit `bf80f8f`: 693 regression
+The recorded baseline checks cover recovery commit `bf80f8f`: 693 regression
 tests, lint, type checking, repository checks and production build passed on the
 existing private Linux worker. Bounded gameplay smoke passed with two unresolved
 console 404 diagnostics. The separate performance test failed at p95 1.4530 ms
@@ -66,6 +66,13 @@ runbook. Use `npm ci` for a frozen dependency install, then run `npm test`,
 `npm run typecheck`, `npm run lint`, and `npm run build` there. Retain source
 identity, screenshots, logs, request failures, and failed outputs; a dispatch or
 successful package install does not establish a pass.
+
+The current movement benchmark uses the production skinned-character path and
+world-firearm factory, with a matched legacy sequence for paired measurements.
+See [the JKH-160 workload and limits](docs/integration/JKH-160-PERFORMANCE.md).
+The [JKH-131 runtime verifier](docs/integration/JKH-131-RUNTIME.md) checks direct
+unarmored damage numerically and rejects unsupported armor or wall-damage
+verdicts; a bounded passing case does not establish the complete firearm matrix.
 
 ## Linear connection
 
