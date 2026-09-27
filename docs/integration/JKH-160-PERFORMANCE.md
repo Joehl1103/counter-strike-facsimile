@@ -1,3 +1,93 @@
+# JKH-160 current-workload cleanup/rebaseline (2026-09-27)
+
+This section supersedes the prior faceted-only benchmark as the current timing
+oracle. Historical entries below remain unchanged evidence and are not directly
+comparable with this corrected workload.
+
+## Scope and preserved behavior
+
+The candidate removes four CPU deformation-buffer controllers and their normal,
+reset, death and graphics-QA writes from `app/page.tsx`. It retains the hidden
+faceted limb meshes, procedural rig joints, authority hit proxies, every weapon
+branch, muzzle/socket attachment, grip solver, death joint capture, and all
+visible GLB sampling. The normal live pose seam is `app/bot-presentation.ts`,
+shared by `app/page.tsx` and the current benchmark. Reset keeps both the zero-time
+and current simulation-time skin samples; no time-dependent presentation step
+was removed.
+
+The comparison oracle is test-only `runLegacyBotPresentationFrame` in
+`tests/helpers/bot-presentation-fixture.ts`. It reproduces the pre-cleanup normal
+sequence, including four controller writes and two foot-plant calls. Run the
+same corrected workload for each side with:
+
+```sh
+JKH160_PRESENTATION_MODE=legacy node --test tests/movement-presentation-performance.test.ts
+node --test tests/movement-presentation-performance.test.ts
+```
+
+The first command measures the retained-buffer predecessor; the second measures
+the candidate. Each keeps the historical test title, eight bots, 240 warmup
+frames, 320 individually timed frames, renderer-equivalent final scene traversal,
+skeleton updates, socket/proxy queries, and strict p95 `< 0.5 ms` gate. The
+320 individual frame timings, p95, mode and exact source-asset hashes are printed
+as JSON before the assertion, so failed thresholds leave usable paired-run
+evidence. The default mode is candidate;
+the legacy mode is only a paired rebaseline oracle.
+
+## Exact fixture inputs and limits
+
+- Authored CT GLB `public/assets/characters/ct-mpfb.glb`, SHA-256
+  `e85a0dd18270caee23a12ef4970868323ac0be1bf7cd21b823af49158e6cf1f8`;
+  2 skinned meshes, 11,348 position vertices and 9,254 triangles.
+- Classic T GLB `public/assets/characters/vanguard.glb`, SHA-256
+  `dfb230fc1f942f259dd00281a1186953ad602fc5d69067ce63e24b2aa439736b`;
+  2 skinned meshes, 7,434 position vertices and 11,376 triangles.
+- Each fixture bot retains the current 11 primary/secondary world-model factory
+  branches, four hidden faceted meshes and an old procedural rig. Eleven simple
+  sphere hit-proxy stand-ins preserve authority-tree traversal load; they are not
+  the exact production hitgroup shapes. Muzzle flash is a point-light stand-in
+  attached at the production weapon socket offset. The primary/secondary weapon
+  model factories and current weapon grip selection are real.
+- GLB source bytes are hash-recorded before parsing. Only material texture
+  references are stripped from a fixture copy because Node has no browser image
+  decoder; original geometry, skin, animation and binary chunks are retained.
+  No texture decode, renderer, browser, collision simulation, or actual game
+  round is included. This fixture is a deterministic CPU presentation workload,
+  not complete-game or visual acceptance.
+
+The equivalence test compares normal pose, a reset ending at nonzero elapsed
+simulation time, explicit crouch sampling, and a finite death-continuation trace.
+It checks local rig pose/grip, current skeleton transforms and sampled skin
+vertices, weapon and muzzle sockets, authority transforms and hit proxies. It
+intentionally ignores the deleted hidden-buffer contents. It is finite module
+coverage; it does not invoke the browser page's full QA/corpse orchestration.
+
+## Candidate handoff
+
+Starting checkout was branch `feature/jkh-119-game-baseline-snapshot` at
+`e01b6c2`, with eight unpushed commits and retained in-progress edits in
+`app/page.tsx` plus new `app/bot-presentation.ts`. Exact ownership/restart
+record: `/Users/josephshomefolder/development/games/counter-strike-facsimile/outputs/jkh-160-resume-2026-09-27/OWNERSHIP.md`. No local Mac game tests,
+builds, browser or performance checks are permitted. Coordinator must run, on
+the dedicated worker, in serialized immutable snapshots:
+
+```sh
+npm run test:regression
+JKH160_PRESENTATION_MODE=legacy node --test tests/movement-presentation-performance.test.ts
+node --test tests/movement-presentation-performance.test.ts
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Record paired raw frame timings and host/Node identity. A failed p95 leaves
+JKH-160 In Progress; do not tune the threshold. Root owns remote execution,
+commit, tracker integration and delivery. A fresh independent reviewer must
+inspect the exact final diff and evidence before any PR delivery. This work does
+not establish the separate 1080p60, full CT/T round, or visual acceptance gates.
+
+---
+
 # JKH-160 / JKH-119 presentation optimization
 
 ## Round 3: final builder round

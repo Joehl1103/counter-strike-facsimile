@@ -192,11 +192,7 @@ import {
   type SkinnedCharacterInstance,
   type SkinnedCharacterTemplate,
 } from './skinned-character-visuals';
-import {
-  createCharacterLimbDeformationController,
-  writeCharacterLimbFootPlanting,
-  type CharacterLimbDeformationController,
-} from './character-limb-deformation';
+import { presentBotAnimation } from './bot-presentation';
 import {
   applyCharacterRigPose,
   applyCharacterRigWeaponGripTargets,
@@ -557,17 +553,6 @@ type BotDeathJointState = {
   rz: number;
 };
 
-type BotDeathLimbState = {
-  knee: number;
-  ankle: number;
-  elbow: number;
-  plant: number;
-  offsetX: number;
-  offsetY: number;
-  offsetZ: number;
-  toeClearance: number;
-};
-
 type BotDeathPresentationState = {
   visualRootOffsetX: number;
   visualRootOffsetY: number;
@@ -594,10 +579,6 @@ type BotDeathPresentationState = {
   rightShoulder: BotDeathJointState;
   rightForearm: BotDeathJointState;
   rightHand: BotDeathJointState;
-  leftLeg: BotDeathLimbState;
-  rightLeg: BotDeathLimbState;
-  leftArm: BotDeathLimbState;
-  rightArm: BotDeathLimbState;
 };
 
 type PlayerDeathCameraState = {
@@ -686,10 +667,6 @@ type Enemy = {
   rig: CharacterRig;
   animationState: BotAnimationState;
   animationPose: BotAnimationPose;
-  leftLegDeformationController: CharacterLimbDeformationController;
-  rightLegDeformationController: CharacterLimbDeformationController;
-  leftArmDeformationController: CharacterLimbDeformationController;
-  rightArmDeformationController: CharacterLimbDeformationController;
   hitMeshes: THREE.Mesh[];
   health: number;
   armor: number;
@@ -2535,7 +2512,6 @@ export default function Home() {
     const facetedHeadGeometry = createFacetedHeadGeometry();
     const facetedLegGeometry = createFacetedLimbGeometry(0.13, 0.56);
     const facetedArmGeometry = createFacetedLimbGeometry(0.105, 0.42);
-    const characterLimbOutputGeometries = new Set<THREE.BufferGeometry>();
     const facetedCueGeometries = {
       ctHead: createFacetedHeadCueGeometry('ct'),
       ctTorso: createFacetedTorsoCueGeometry('ct'),
@@ -2810,18 +2786,6 @@ export default function Home() {
         mesh.material.vertexColors = true;
       });
 
-      const leftLegDeformationController =
-        createCharacterLimbDeformationController(facetedLeftLeg, 'leg');
-      const rightLegDeformationController =
-        createCharacterLimbDeformationController(facetedRightLeg, 'leg');
-      const leftArmDeformationController =
-        createCharacterLimbDeformationController(facetedLeftArm, 'arm');
-      const rightArmDeformationController =
-        createCharacterLimbDeformationController(facetedRightArm, 'arm');
-      characterLimbOutputGeometries.add(leftLegDeformationController.geometry);
-      characterLimbOutputGeometries.add(rightLegDeformationController.geometry);
-      characterLimbOutputGeometries.add(leftArmDeformationController.geometry);
-      characterLimbOutputGeometries.add(rightArmDeformationController.geometry);
       const ctTorsoCue = new THREE.Mesh(
         facetedCueGeometries.ctTorso,
         enemyVestMaterial.clone(),
@@ -3077,10 +3041,6 @@ export default function Home() {
         rig,
         animationState: createBotAnimationState(),
         animationPose: createBotAnimationPose(),
-        leftLegDeformationController,
-        rightLegDeformationController,
-        leftArmDeformationController,
-        rightArmDeformationController,
         hitMeshes: enemyHitMeshes,
         health: 100,
         armor: 0,
@@ -3359,10 +3319,6 @@ export default function Home() {
     const resetBotAnimationPresentation = (bot: Enemy) => {
       Object.assign(bot.animationState, createBotAnimationState());
       Object.assign(bot.animationPose, createBotAnimationPose());
-      bot.leftLegDeformationController.reset();
-      bot.rightLegDeformationController.reset();
-      bot.leftArmDeformationController.reset();
-      bot.rightArmDeformationController.reset();
       bot.animationPose.lowerBodyYaw = 0;
       syncBotRigToAuthority(bot);
       applyCharacterRigPose(bot.rig, bot.animationPose);
@@ -3370,32 +3326,6 @@ export default function Home() {
       applyCharacterRigWeaponGripTargets(bot.rig, bot.weaponGripOutput);
       sampleSkinnedCharacterPose(bot.skinned, bot.animationPose, {
         elapsedSeconds: 0,
-      });
-      bot.leftLegDeformationController.write({
-        knee: bot.animationPose.leftKneePitch,
-        ankle: bot.animationPose.leftAnklePitch,
-      });
-      writeCharacterLimbFootPlanting(bot.leftLegDeformationController, {
-        groundY: bot.root.position.y,
-        plant: bot.animationPose.leftFootPlant,
-        swingOffsetZ: bot.animationPose.leftFootOffsetZ,
-        toeClearance: bot.animationPose.leftToeClearance,
-      });
-      bot.rightLegDeformationController.write({
-        knee: bot.animationPose.rightKneePitch,
-        ankle: bot.animationPose.rightAnklePitch,
-      });
-      writeCharacterLimbFootPlanting(bot.rightLegDeformationController, {
-        groundY: bot.root.position.y,
-        plant: bot.animationPose.rightFootPlant,
-        swingOffsetZ: bot.animationPose.rightFootOffsetZ,
-        toeClearance: bot.animationPose.rightToeClearance,
-      });
-      bot.leftArmDeformationController.write({
-        elbow: bot.weaponGripOutput.leftElbowPitch,
-      });
-      bot.rightArmDeformationController.write({
-        elbow: bot.weaponGripOutput.rightElbowPitch,
       });
       sampleSkinnedCharacterPose(bot.skinned, bot.animationPose, {
         elapsedSeconds: simulationNowMs / 1000,
@@ -3422,8 +3352,8 @@ export default function Home() {
         1,
       );
       const hitCue = THREE.MathUtils.clamp(bot.suppression, 0, 1);
-      syncBotRigToAuthority(bot);
-      writeBotAnimationPose(
+      presentBotAnimation(
+        bot,
         {
           dtSeconds: dt,
           velocity: {
@@ -3446,54 +3376,9 @@ export default function Home() {
             hit: hitCue,
           },
         },
-        bot.animationState,
-        bot.animationPose,
-      );
-      // visualRoot already carries the authority body yaw; applying it again
-      // at lowerBody would double the turn.
-      bot.animationPose.lowerBodyYaw = 0;
-      applyCharacterRigPose(bot.rig, bot.animationPose);
-      applyCharacterRigWeaponAim(
-        bot.rig,
         wrapBotAngle(bot.aimYaw - bot.bodyYaw),
-        bot.animationPose,
+        simulationNowMs / 1000,
       );
-      applyCharacterRigWeaponGripTargets(bot.rig, bot.weaponGripOutput);
-      // Both feet share the pelvis ancestors; refresh them once for this pose.
-      bot.rig.pelvis.updateWorldMatrix(true, false);
-      bot.rig.leftThigh.updateWorldMatrix(false, false);
-      bot.rig.rightThigh.updateWorldMatrix(false, false);
-      bot.leftLegDeformationController.write({
-        knee: bot.animationPose.leftKneePitch,
-        ankle: bot.animationPose.leftAnklePitch,
-      });
-      writeCharacterLimbFootPlanting(bot.leftLegDeformationController, {
-        groundY: bot.root.position.y,
-        plant: bot.grounded ? bot.animationPose.leftFootPlant : 0,
-        swingOffsetZ: bot.animationPose.leftFootOffsetZ,
-        toeClearance: bot.animationPose.leftToeClearance,
-      }, true);
-      bot.rightLegDeformationController.write({
-        knee: bot.animationPose.rightKneePitch,
-        ankle: bot.animationPose.rightAnklePitch,
-      });
-      writeCharacterLimbFootPlanting(bot.rightLegDeformationController, {
-        groundY: bot.root.position.y,
-        plant: bot.grounded ? bot.animationPose.rightFootPlant : 0,
-        swingOffsetZ: bot.animationPose.rightFootOffsetZ,
-        toeClearance: bot.animationPose.rightToeClearance,
-      }, true);
-      bot.leftArmDeformationController.write({
-        elbow: bot.weaponGripOutput.leftElbowPitch,
-      });
-      bot.rightArmDeformationController.write({
-        elbow: bot.weaponGripOutput.rightElbowPitch,
-      });
-      // Both team loops use this helper after the live animation pose is ready.
-      // Sample the served skinned body here so it cannot retain its bind pose.
-      sampleSkinnedCharacterPose(bot.skinned, bot.animationPose, {
-        elapsedSeconds: simulationNowMs / 1000,
-      });
     };
 
     const captureBotDeathJoint = (
@@ -3535,46 +3420,6 @@ export default function Home() {
       rightShoulder: captureBotDeathJoint(bot.rig.rightShoulder),
       rightForearm: captureBotDeathJoint(bot.rig.rightForearm),
       rightHand: captureBotDeathJoint(bot.rig.rightHand),
-      leftLeg: {
-        knee: bot.animationPose.leftKneePitch,
-        ankle: bot.animationPose.leftAnklePitch,
-        elbow: 0,
-        plant: bot.animationPose.leftFootPlant,
-        offsetX: bot.animationPose.leftFootOffsetX,
-        offsetY: bot.animationPose.leftFootOffsetY,
-        offsetZ: bot.animationPose.leftFootOffsetZ,
-        toeClearance: bot.animationPose.leftToeClearance,
-      },
-      rightLeg: {
-        knee: bot.animationPose.rightKneePitch,
-        ankle: bot.animationPose.rightAnklePitch,
-        elbow: 0,
-        plant: bot.animationPose.rightFootPlant,
-        offsetX: bot.animationPose.rightFootOffsetX,
-        offsetY: bot.animationPose.rightFootOffsetY,
-        offsetZ: bot.animationPose.rightFootOffsetZ,
-        toeClearance: bot.animationPose.rightToeClearance,
-      },
-      leftArm: {
-        knee: 0,
-        ankle: 0,
-        elbow: bot.weaponGripOutput.leftElbowPitch,
-        plant: 0,
-        offsetX: 0,
-        offsetY: 0,
-        offsetZ: 0,
-        toeClearance: 0,
-      },
-      rightArm: {
-        knee: 0,
-        ankle: 0,
-        elbow: bot.weaponGripOutput.rightElbowPitch,
-        plant: 0,
-        offsetX: 0,
-        offsetY: 0,
-        offsetZ: 0,
-        toeClearance: 0,
-      },
     });
 
     const applyBotDeathJoint = (
@@ -3588,9 +3433,6 @@ export default function Home() {
       joint.rotation.set(start.rx + pitch, start.ry + yaw, start.rz + roll);
     };
 
-    const blendBotDeathInput = (start: number, target: number, eased: number) =>
-      start + (target - start) * eased;
-
     const applyBotDeathVisualPose = (bot: Enemy) => {
       const start = bot.deathPresentation;
       if (!start) return;
@@ -3599,11 +3441,6 @@ export default function Home() {
         bot.deathVariant,
         bot.deathPose,
       );
-      const progress = Math.min(
-        1,
-        Math.max(0, bot.deathElapsedSeconds / BOT_DEATH_DURATION_SECONDS),
-      );
-      const eased = progress * progress * (3 - 2 * progress);
       // Death is a render-only offset. The authority root remains at its
       // grounded anchor, while this sibling carries the fall and its joints.
       bot.rig.visualRoot.position.set(
@@ -3683,59 +3520,6 @@ export default function Home() {
         pose.rightHandPitch,
       );
 
-      // Deformation buffers use their retained bind snapshots. Feed them the
-      // captured angles plus the same eased death offsets, then let the
-      // existing plant solver keep a sole at the render-only ground plane.
-      if (progress > 0) {
-        // A fallen body keeps both rendered soles grounded. Leaving the
-        // opposite foot in swing mode lets the corpse's rotated root carry
-        // that limb below the visual ground plane, so this is presentation
-        // contact only; authority roots and hit proxies remain unchanged.
-        const leftPlantTarget = 1;
-        const rightPlantTarget = 1;
-        bot.leftLegDeformationController.write({
-          knee: start.leftLeg.knee + pose.leftKneePitch,
-          ankle: start.leftLeg.ankle + pose.leftAnklePitch,
-        });
-        writeCharacterLimbFootPlanting(bot.leftLegDeformationController, {
-          plant: blendBotDeathInput(
-            start.leftLeg.plant,
-            leftPlantTarget,
-            eased,
-          ),
-          swingOffsetZ: start.leftLeg.offsetZ,
-          groundY: 0,
-          toeClearance: blendBotDeathInput(
-            start.leftLeg.toeClearance,
-            0.04,
-            eased,
-          ),
-        });
-        bot.rightLegDeformationController.write({
-          knee: start.rightLeg.knee + pose.rightKneePitch,
-          ankle: start.rightLeg.ankle + pose.rightAnklePitch,
-        });
-        writeCharacterLimbFootPlanting(bot.rightLegDeformationController, {
-          plant: blendBotDeathInput(
-            start.rightLeg.plant,
-            rightPlantTarget,
-            eased,
-          ),
-          swingOffsetZ: start.rightLeg.offsetZ,
-          groundY: 0,
-          toeClearance: blendBotDeathInput(
-            start.rightLeg.toeClearance,
-            0.04,
-            eased,
-          ),
-        });
-        bot.leftArmDeformationController.write({
-          elbow: start.leftArm.elbow + pose.leftForearmPitch,
-        });
-        bot.rightArmDeformationController.write({
-          elbow: start.rightArm.elbow + pose.rightForearmPitch,
-        });
-      }
       sampleSkinnedCharacterPose(bot.skinned, bot.animationPose, {
         elapsedSeconds: simulationNowMs / 1000,
       });
@@ -3827,10 +3611,6 @@ export default function Home() {
 
       Object.assign(bot.animationState, createBotAnimationState());
       Object.assign(bot.animationPose, createBotAnimationPose());
-      bot.leftLegDeformationController.reset();
-      bot.rightLegDeformationController.reset();
-      bot.leftArmDeformationController.reset();
-      bot.rightArmDeformationController.reset();
       writeBotAnimationPose(
         {
           // A zero delta makes each capture an independent, phase-locked
@@ -3866,35 +3646,12 @@ export default function Home() {
       bot.rig.supportGripTarget.visible = pose.kind !== 'death';
 
       applyCharacterRigWeaponGripTargets(bot.rig, bot.weaponGripOutput);
-      bot.leftLegDeformationController.write({
-        knee: bot.animationPose.leftKneePitch,
-        ankle: bot.animationPose.leftAnklePitch,
-      });
-      writeCharacterLimbFootPlanting(bot.leftLegDeformationController, {
-        plant: bot.animationPose.leftFootPlant,
-        swingOffsetZ: bot.animationPose.leftFootOffsetZ,
-        toeClearance: bot.animationPose.leftToeClearance,
-      });
-      bot.rightLegDeformationController.write({
-        knee: bot.animationPose.rightKneePitch,
-        ankle: bot.animationPose.rightAnklePitch,
-      });
-      writeCharacterLimbFootPlanting(bot.rightLegDeformationController, {
-        plant: bot.animationPose.rightFootPlant,
-        swingOffsetZ: bot.animationPose.rightFootOffsetZ,
-        toeClearance: bot.animationPose.rightToeClearance,
-      });
-      bot.leftArmDeformationController.write({
-        elbow: bot.weaponGripOutput.leftElbowPitch,
-      });
-      bot.rightArmDeformationController.write({
-        elbow: bot.weaponGripOutput.rightElbowPitch,
-      });
+
       sampleSkinnedCharacterPose(bot.skinned, bot.animationPose, {
         elapsedSeconds: pose.timeSeconds,
       });
       if (pose.kind === 'death') {
-        // Capture after the normal deformation/IK pass. This makes each QA
+        // Capture after the normal pose/IK pass. This makes each QA
         // death sample a real neutral, contact, strafe, reload, or recoil
         // origin instead of a reset bind pose.
         bot.deathPresentation = captureBotDeathPresentation(bot);
@@ -3958,30 +3715,10 @@ export default function Home() {
         applyCharacterRigPose(bot.rig, bot.animationPose);
         applyCharacterRigWeaponAim(bot.rig, 0, bot.animationPose);
         applyCharacterRigWeaponGripTargets(bot.rig, bot.weaponGripOutput);
-        bot.leftLegDeformationController.write({
-          knee: bot.animationPose.leftKneePitch,
-          ankle: bot.animationPose.leftAnklePitch,
-        });
-        writeCharacterLimbFootPlanting(bot.leftLegDeformationController, {
-          plant: bot.animationPose.leftFootPlant,
-          swingOffsetZ: bot.animationPose.leftFootOffsetZ,
-          toeClearance: bot.animationPose.leftToeClearance,
-        });
-        bot.rightLegDeformationController.write({
-          knee: bot.animationPose.rightKneePitch,
-          ankle: bot.animationPose.rightAnklePitch,
-        });
-        writeCharacterLimbFootPlanting(bot.rightLegDeformationController, {
-          plant: bot.animationPose.rightFootPlant,
-          swingOffsetZ: bot.animationPose.rightFootOffsetZ,
-          toeClearance: bot.animationPose.rightToeClearance,
-        });
-        bot.leftArmDeformationController.write({
-          elbow: bot.weaponGripOutput.leftElbowPitch,
-        });
-        bot.rightArmDeformationController.write({
-          elbow: bot.weaponGripOutput.rightElbowPitch,
-        });
+
+
+
+
         sampleSkinnedCharacterPose(bot.skinned, bot.animationPose, {
           elapsedSeconds: review.timeSeconds,
         });
@@ -11703,8 +11440,7 @@ export default function Home() {
         }
         if (!(object instanceof THREE.Mesh)) return;
         if (
-          !texturedViewmodelArmFactory.ownsGeometry(object.geometry) &&
-          !characterLimbOutputGeometries.has(object.geometry)
+          !texturedViewmodelArmFactory.ownsGeometry(object.geometry)
         )
           object.geometry.dispose();
         const materials = Array.isArray(object.material)
@@ -11719,11 +11455,6 @@ export default function Home() {
           material.dispose();
         });
       });
-      characterLimbOutputGeometries.forEach((geometry) => geometry.dispose());
-      // The controllers cloned these shared sources during bot setup, so no
-      // scene mesh owns the originals by the time traversal cleanup runs.
-      facetedLegGeometry.dispose();
-      facetedArmGeometry.dispose();
       texturedViewmodelArmFactory.dispose();
       Object.values(worldFirearmMaterials).forEach((material) =>
         material.dispose(),
