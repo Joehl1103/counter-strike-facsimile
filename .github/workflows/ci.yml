@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: '22.14.0'
       - run: node --test .github/scripts/*.test.mjs
+      # Like the workflow unit tests above, these execute only in the ephemeral
+      # contents-read runner, with no persisted checkout credential or review secret.
+      - run: node --test factory-control/*.test.mjs
       - run: node .github/scripts/ci-policy.mjs
 
   game:

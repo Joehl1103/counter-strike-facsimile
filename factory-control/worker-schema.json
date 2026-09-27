@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "message"],
+  "properties": {
+    "outcome": { "type": "string", "enum": ["complete", "blocked"] },
+    "message": { "type": "string" }
+  }
+}
