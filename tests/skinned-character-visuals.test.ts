@@ -19,6 +19,7 @@ import {
   disposeSkinnedCharacterInstance,
   getSkinnedCharacterAnimationWeights,
   getSkinnedCharacterNormalizedPhase,
+  inspectSkinnedCharacterGroundSupport,
   resetSkinnedCharacterDeathPose,
   sampleSkinnedCharacterPose,
   setSkinnedCharacterWeaponGrip,
@@ -54,6 +55,92 @@ function preciseGroundMinInVisualRoot(
     }
   });
   return minimumY;
+}
+
+function assertGroundSupportMatchesNative(
+  instance: ReturnType<typeof createSkinnedCharacterInstance>,
+  label: string,
+): void {
+  const optimizedSamples = inspectSkinnedCharacterGroundSupport(instance);
+  assert.ok(optimizedSamples.length > 0, `${label} has no support samples`);
+
+  instance.visualRoot.updateMatrixWorld(true);
+  const rootInverse = instance.visualRoot.matrixWorld.clone().invert();
+  const meshToRootByMesh = new Map<THREE.SkinnedMesh, THREE.Matrix4>();
+  const nativeVertex = new THREE.Vector3();
+  let optimizedMinimum = Number.POSITIVE_INFINITY;
+  let nativeMinimum = Number.POSITIVE_INFINITY;
+  for (const sample of optimizedSamples) {
+    let meshToRoot = meshToRootByMesh.get(sample.mesh);
+    if (!meshToRoot) {
+      meshToRoot = new THREE.Matrix4().multiplyMatrices(
+        rootInverse,
+        sample.mesh.matrixWorld,
+      );
+      meshToRootByMesh.set(sample.mesh, meshToRoot);
+    }
+    sample.mesh
+      .getVertexPosition(sample.vertexIndex, nativeVertex)
+      .applyMatrix4(meshToRoot);
+    assert.ok(
+      sample.position.distanceTo(nativeVertex) <= 1e-10,
+      `${label} vertex=${sample.vertexIndex} distance=${sample.position.distanceTo(nativeVertex)}`,
+    );
+    optimizedMinimum = Math.min(optimizedMinimum, sample.position.y);
+    nativeMinimum = Math.min(nativeMinimum, nativeVertex.y);
+  }
+  assert.ok(
+    Math.abs(optimizedMinimum - nativeMinimum) <= 1e-10,
+    `${label} support minimum=${optimizedMinimum} native=${nativeMinimum}`,
+  );
+  assert.ok(
+    Math.abs(-optimizedMinimum - -nativeMinimum) <= 1e-10,
+    `${label} correction=${-optimizedMinimum} native=${-nativeMinimum}`,
+  );
+}
+
+function groundSupportIndexSignatures(
+  instance: ReturnType<typeof createSkinnedCharacterInstance>,
+): ReadonlyMap<THREE.SkinnedMesh, string> {
+  const signatures = new Map<THREE.SkinnedMesh, number[]>();
+  for (const sample of inspectSkinnedCharacterGroundSupport(instance)) {
+    let indices = signatures.get(sample.mesh);
+    if (!indices) {
+      indices = [];
+      signatures.set(sample.mesh, indices);
+    }
+    indices.push(sample.vertexIndex);
+  }
+  return new Map(
+    [...signatures].map(([mesh, indices]) => [mesh, indices.join(',')]),
+  );
+}
+
+function assertGroundSupportSetIsUnchanged(
+  expected: ReadonlyMap<THREE.SkinnedMesh, string>,
+  instance: ReturnType<typeof createSkinnedCharacterInstance>,
+  label: string,
+): void {
+  const actual = groundSupportIndexSignatures(instance);
+  assert.equal(actual.size, expected.size, `${label} support mesh count`);
+  for (const [mesh, expectedIndices] of expected) {
+    assert.equal(
+      actual.get(mesh),
+      expectedIndices,
+      `${label} support indices changed`,
+    );
+  }
+}
+
+function assertFullSkinGroundCorrection(
+  instance: ReturnType<typeof createSkinnedCharacterInstance>,
+  label: string,
+): void {
+  const minimumY = preciseGroundMinInVisualRoot(instance);
+  assert.ok(
+    minimumY >= -0.02 && minimumY <= 0.002,
+    `${label} full native minimum=${minimumY}`,
+  );
 }
 
 function preciseSkinnedBoundsInVisualRoot(
@@ -305,9 +392,11 @@ function readCharacterGlbJson(): GlbJson {
   return JSON.parse(asset.subarray(20, 20 + jsonLength).toString()) as GlbJson;
 }
 
-function readTexturelessCharacterGlb(): ArrayBuffer {
+function readTexturelessCharacterGlb(
+  filename = 'vanguard.glb',
+): ArrayBuffer {
   const source = readFileSync(
-    new URL('../public/assets/characters/vanguard.glb', import.meta.url),
+    new URL(`../public/assets/characters/${filename}`, import.meta.url),
   );
   const sourceJsonLength = source.readUInt32LE(12);
   const json = JSON.parse(
@@ -1023,6 +1112,174 @@ void test('reduced grounding stays within two centimetres of full skin bounds in
   }
 });
 
+void test('grounding support vertices match Three native skinning for both shipped character assets', async () => {
+  const assets = [
+    { filename: 'vanguard.glb', surface: 'classic' as const, side: 't' as const },
+    { filename: 'ct-mpfb.glb', surface: 'authored' as const, side: 'ct' as const },
+  ];
+  const grips = [
+    'rifle',
+    'carbine',
+    'smg',
+    'shotgun',
+    'sniper',
+    'glock18',
+    'usp',
+    'p228',
+    'deagle',
+    'fiveseven',
+    'elite',
+  ] as const;
+  const parentTransforms = [
+    { position: [0, 0, 0] as const, rotation: [0, 0, 0] as const },
+    {
+      position: [3.5, 0.75, -2.25] as const,
+      rotation: [0, 0.83, 0] as const,
+    },
+    {
+      position: [-4, 1.2, 6] as const,
+      rotation: [0.08, -1.15, -0.06] as const,
+    },
+  ] as const;
+  for (const asset of assets) {
+    const gltf = await new GLTFLoader().parseAsync(
+      readTexturelessCharacterGlb(asset.filename),
+      '',
+    );
+    const instance = createSkinnedCharacterInstance(
+      createSkinnedCharacterTemplate(gltf, asset.surface),
+      asset.side,
+    );
+    try {
+      const expectedSupportIndices = groundSupportIndexSignatures(instance);
+      for (const [transformIndex, transform] of parentTransforms.entries()) {
+        instance.visualRoot.position.set(...transform.position);
+        instance.visualRoot.rotation.set(...transform.rotation);
+        for (const [gripIndex, grip] of grips.entries()) {
+          setSkinnedCharacterWeaponGrip(instance, grip);
+          sampleSkinnedCharacterPose(
+            instance,
+            {
+              phase: gripIndex * 0.37,
+              speed: gripIndex % 2 === 0 ? 0 : 4.2,
+              pelvisLift: -0.07 * (1 + (gripIndex % 4)),
+              weaponSocketY: 1.2 - 0.07 * (1 + (gripIndex % 4)),
+            },
+            { elapsedSeconds: gripIndex * 0.17 },
+          );
+          assertGroundSupportMatchesNative(
+            instance,
+            `${asset.filename}/parent=${transformIndex}/grip=${grip}`,
+          );
+          assertGroundSupportSetIsUnchanged(
+            expectedSupportIndices,
+            instance,
+            `${asset.filename}/parent=${transformIndex}/grip=${grip}`,
+          );
+          assertFullSkinGroundCorrection(
+            instance,
+            `${asset.filename}/parent=${transformIndex}/grip=${grip}`,
+          );
+          applySkinnedCharacterDeathPose(
+            instance,
+            getBotDeathPose(0.45, gripIndex % 4),
+          );
+          assertGroundSupportMatchesNative(
+            instance,
+            `${asset.filename}/death-parent=${transformIndex}/grip=${grip}`,
+          );
+          assertGroundSupportSetIsUnchanged(
+            expectedSupportIndices,
+            instance,
+            `${asset.filename}/death-parent=${transformIndex}/grip=${grip}`,
+          );
+          assertFullSkinGroundCorrection(
+            instance,
+            `${asset.filename}/death-parent=${transformIndex}/grip=${grip}`,
+          );
+        }
+      }
+    } finally {
+      disposeSkinnedCharacterInstance(instance);
+    }
+  }
+});
+
+void test('grounding reads live four-slot weights and indices after bind and morph changes', async () => {
+  const gltf = await new GLTFLoader().parseAsync(
+    readTexturelessCharacterGlb(),
+    '',
+  );
+  const instance = createSkinnedCharacterInstance(
+    createSkinnedCharacterTemplate(gltf),
+    'ct',
+  );
+  const originalSupportSamples = inspectSkinnedCharacterGroundSupport(instance);
+  const controlledMesh = originalSupportSamples[0]?.mesh;
+  assert.ok(controlledMesh, 'expected a skinned support mesh');
+  const supportIndices = originalSupportSamples
+    .filter((sample) => sample.mesh === controlledMesh)
+    .map((sample) => sample.vertexIndex);
+  const vertexCount = Math.max(...supportIndices) + 1;
+  const controlledGeometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(vertexCount * 3);
+  const skinIndices = new Uint16Array(vertexCount * 4);
+  const skinWeights = new Float32Array(vertexCount * 4);
+  const relativeMorphPositions = new Float32Array(vertexCount * 3);
+  const absoluteMorphPositions = new Float32Array(vertexCount * 3);
+  for (let vertexIndex = 0; vertexIndex < vertexCount; vertexIndex += 1) {
+    positions[vertexIndex * 3] = (vertexIndex % 7) * 0.03;
+    positions[vertexIndex * 3 + 1] = (vertexIndex % 11) * -0.02;
+    positions[vertexIndex * 3 + 2] = (vertexIndex % 5) * 0.04;
+    relativeMorphPositions[vertexIndex * 3] = 0.09;
+    relativeMorphPositions[vertexIndex * 3 + 1] = -0.06;
+    relativeMorphPositions[vertexIndex * 3 + 2] = 0.03;
+    absoluteMorphPositions[vertexIndex * 3] = positions[vertexIndex * 3] + 0.08;
+    absoluteMorphPositions[vertexIndex * 3 + 1] = positions[vertexIndex * 3 + 1] - 0.04;
+    absoluteMorphPositions[vertexIndex * 3 + 2] = positions[vertexIndex * 3 + 2] + 0.02;
+    skinIndices.set([0, 1, 2, 3], vertexIndex * 4);
+    skinWeights.set([0.1, 0.2, 0.3, 0.4], vertexIndex * 4);
+  }
+  controlledGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  controlledGeometry.setAttribute('skinIndex', new THREE.BufferAttribute(skinIndices, 4));
+  controlledGeometry.setAttribute('skinWeight', new THREE.BufferAttribute(skinWeights, 4));
+  controlledGeometry.morphAttributes.position = [
+    new THREE.BufferAttribute(relativeMorphPositions, 3),
+  ];
+  controlledMesh.geometry = controlledGeometry;
+  controlledMesh.morphTargetInfluences = [0.65];
+  controlledMesh.position.set(0.4, -0.25, 0.6);
+  controlledMesh.rotation.set(0.1, -0.2, 0.05);
+  controlledMesh.bindMatrix.makeTranslation(0.12, -0.08, 0.04);
+  try {
+    controlledGeometry.morphTargetsRelative = true;
+    controlledMesh.bindMode = 'attached';
+    assertGroundSupportMatchesNative(instance, 'relative morph attached bind');
+
+    controlledGeometry.morphAttributes.position = [
+      new THREE.BufferAttribute(absoluteMorphPositions, 3),
+    ];
+    controlledGeometry.morphTargetsRelative = false;
+    controlledMesh.bindMode = 'detached';
+    controlledMesh.bindMatrix.elements[3] = 0.07;
+    controlledMesh.bindMatrixInverse.copy(controlledMesh.bindMatrix).invert();
+    assertGroundSupportMatchesNative(instance, 'absolute morph detached bind');
+
+    const mutatedVertexIndex = supportIndices[0];
+    skinIndices.set([3, 2, 1, 0], mutatedVertexIndex * 4);
+    skinWeights.set([0.4, 0, 0.2, 0.4], mutatedVertexIndex * 4);
+    controlledGeometry.getAttribute('skinIndex').needsUpdate = true;
+    controlledGeometry.getAttribute('skinWeight').needsUpdate = true;
+    assertGroundSupportMatchesNative(
+      instance,
+      'post-setup live skin-index and skin-weight mutation',
+    );
+  } finally {
+    controlledGeometry.dispose();
+    disposeSkinnedCharacterInstance(instance);
+  }
+});
+
 void test('runtime grounding evaluates a reduced support hull instead of every vertex', async () => {
   const gltf = await new GLTFLoader().parseAsync(
     readTexturelessCharacterGlb(),
@@ -1038,11 +1295,10 @@ void test('runtime grounding evaluates a reduced support hull instead of every v
       fullVertexCount += object.geometry.getAttribute('position').count;
   });
   // oxlint-disable typescript/unbound-method
-  const originalGetVertexPosition =
-    THREE.SkinnedMesh.prototype.getVertexPosition;
+  const originalGetVertexPosition = THREE.Mesh.prototype.getVertexPosition;
   // oxlint-enable typescript/unbound-method
   let vertexReads = 0;
-  THREE.SkinnedMesh.prototype.getVertexPosition = function (
+  THREE.Mesh.prototype.getVertexPosition = function (
     index: number,
     target: THREE.Vector3,
   ) {
@@ -1072,7 +1328,7 @@ void test('runtime grounding evaluates a reduced support hull instead of every v
       );
     }
   } finally {
-    THREE.SkinnedMesh.prototype.getVertexPosition = originalGetVertexPosition;
+    THREE.Mesh.prototype.getVertexPosition = originalGetVertexPosition;
     disposeSkinnedCharacterInstance(instance);
   }
 });

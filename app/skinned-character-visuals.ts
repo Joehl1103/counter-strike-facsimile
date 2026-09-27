@@ -98,6 +98,13 @@ type SkinnedCharacterActions = Readonly<{
 type SkinnedGroundSupportMesh = Readonly<{
   mesh: THREE.SkinnedMesh;
   vertexIndices: readonly number[];
+  /** Rebuilt after every skeleton update; never reused across grounding calls. */
+  bonePalette: Float64Array;
+  meshVertex: THREE.Vector3;
+  baseVertex: THREE.Vector4;
+  transformedVertex: THREE.Vector4;
+  skinnedVertex: THREE.Vector3;
+  rootVertex: THREE.Vector3;
 }>;
 
 export type SkinnedCharacterInstance = {
@@ -156,9 +163,9 @@ const scratchDeathQuaternion = new THREE.Quaternion();
 const scratchDeathBoneQuaternion = new THREE.Quaternion();
 const scratchDeathBoneDeltaQuaternion = new THREE.Quaternion();
 const scratchEuler = new THREE.Euler();
-const scratchGroundVertex = new THREE.Vector3();
 const scratchGroundTransform = new THREE.Matrix4();
 const scratchVisualRootInverse = new THREE.Matrix4();
+const scratchGroundBoneMatrix = new THREE.Matrix4();
 const groundSupportIndicesByGeometry = new WeakMap<
   THREE.BufferGeometry,
   readonly number[]
@@ -446,30 +453,183 @@ function createGroundSupportMeshes(
       Object.freeze({
         mesh: object,
         vertexIndices: getGroundSupportVertexIndices(object.geometry),
+        bonePalette: new Float64Array(object.skeleton.bones.length * 16),
+        meshVertex: new THREE.Vector3(),
+        baseVertex: new THREE.Vector4(),
+        transformedVertex: new THREE.Vector4(),
+        skinnedVertex: new THREE.Vector3(),
+        rootVertex: new THREE.Vector3(),
       }),
     );
   });
   return Object.freeze(supports);
 }
 
-/** Ground the reduced skinned support hull in visualRoot-local coordinates. */
-function groundSkinnedCharacter(instance: SkinnedCharacterInstance): number {
+function updateGroundSupportBonePalette(support: SkinnedGroundSupportMesh): void {
+  const { bonePalette, mesh } = support;
+  const { boneInverses, bones } = mesh.skeleton;
+  for (let boneIndex = 0; boneIndex < bones.length; boneIndex += 1) {
+    scratchGroundBoneMatrix.multiplyMatrices(
+      bones[boneIndex].matrixWorld,
+      boneInverses[boneIndex],
+    );
+    bonePalette.set(scratchGroundBoneMatrix.elements, boneIndex * 16);
+  }
+}
+
+function applyGroundSupportPaletteTransform(
+  support: SkinnedGroundSupportMesh,
+  boneIndex: number,
+  target: THREE.Vector4,
+): THREE.Vector4 {
+  const paletteOffset = boneIndex * 16;
+  const palette = support.bonePalette;
+  const x = target.x;
+  const y = target.y;
+  const z = target.z;
+  const w = target.w;
+  // This is Vector4.applyMatrix4 copied in native multiplication order. The
+  // Float64 palette avoids allocating a Matrix4 for every live influence.
+  target.x =
+    palette[paletteOffset] * x +
+    palette[paletteOffset + 4] * y +
+    palette[paletteOffset + 8] * z +
+    palette[paletteOffset + 12] * w;
+  target.y =
+    palette[paletteOffset + 1] * x +
+    palette[paletteOffset + 5] * y +
+    palette[paletteOffset + 9] * z +
+    palette[paletteOffset + 13] * w;
+  target.z =
+    palette[paletteOffset + 2] * x +
+    palette[paletteOffset + 6] * y +
+    palette[paletteOffset + 10] * z +
+    palette[paletteOffset + 14] * w;
+  target.w =
+    palette[paletteOffset + 3] * x +
+    palette[paletteOffset + 7] * y +
+    palette[paletteOffset + 11] * z +
+    palette[paletteOffset + 15] * w;
+  return target;
+}
+
+function sampleGroundSupportVertex(
+  support: SkinnedGroundSupportMesh,
+  vertexIndex: number,
+  meshToVisualRoot: THREE.Matrix4,
+): THREE.Vector3 {
+  const {
+    mesh,
+    meshVertex,
+    baseVertex,
+    rootVertex,
+    skinnedVertex,
+    transformedVertex,
+  } = support;
+  const skinIndex = mesh.geometry.getAttribute('skinIndex');
+  const skinWeight = mesh.geometry.getAttribute('skinWeight');
+  if (!skinIndex || !skinWeight) {
+    throw new Error('Skinned character geometry is missing skin attributes');
+  }
+
+  // Keep Mesh's current position and relative/absolute morph behavior before
+  // reproducing SkinnedMesh's Vector4 bind and weighted bone arithmetic.
+  THREE.Mesh.prototype.getVertexPosition.call(mesh, vertexIndex, meshVertex);
+  baseVertex.set(meshVertex.x, meshVertex.y, meshVertex.z, 1).applyMatrix4(
+    mesh.bindMatrix,
+  );
+  skinnedVertex.set(0, 0, 0);
+  for (let influence = 0; influence < 4; influence += 1) {
+    const weight = skinWeight.getComponent(vertexIndex, influence);
+    if (weight === 0) {
+      continue;
+    }
+    const boneIndex = skinIndex.getComponent(vertexIndex, influence);
+    transformedVertex
+      .copy(baseVertex);
+    applyGroundSupportPaletteTransform(
+      support,
+      boneIndex,
+      transformedVertex,
+    );
+    // Match Three's Vector3 target branch exactly: the temporary transformed
+    // vertex remains homogeneous, while the weighted accumulation uses xyz.
+    skinnedVertex.x += transformedVertex.x * weight;
+    skinnedVertex.y += transformedVertex.y * weight;
+    skinnedVertex.z += transformedVertex.z * weight;
+  }
+  // Three's getVertexPosition passes Vector3 to applyBoneTransform, so this
+  // native bind-inverse step includes Vector3's final homogeneous divide.
+  skinnedVertex.applyMatrix4(mesh.bindMatrixInverse);
+  rootVertex
+    .copy(skinnedVertex)
+    .applyMatrix4(meshToVisualRoot);
+  return rootVertex;
+}
+
+function prepareGroundSupportSampling(
+  instance: SkinnedCharacterInstance,
+): readonly SkinnedGroundSupportMesh[] {
   instance.visualRoot.updateMatrixWorld(true);
   updateSkinnedMeshSkeletons(instance.model);
   scratchVisualRootInverse.copy(instance.visualRoot.matrixWorld).invert();
-  let minimumY = Number.POSITIVE_INFINITY;
-  for (const { mesh, vertexIndices } of groundSupportMeshesByInstance.get(
-    instance,
-  ) ?? []) {
+  const supports = groundSupportMeshesByInstance.get(instance) ?? [];
+  for (const support of supports) {
+    updateGroundSupportBonePalette(support);
+  }
+  return supports;
+}
+
+/** Test seam for direct comparison with Three's native skinned-vertex oracle. */
+export function inspectSkinnedCharacterGroundSupport(
+  instance: SkinnedCharacterInstance,
+): readonly Readonly<{
+  mesh: THREE.SkinnedMesh;
+  vertexIndex: number;
+  position: THREE.Vector3;
+}>[] {
+  const samples: Array<{
+    mesh: THREE.SkinnedMesh;
+    vertexIndex: number;
+    position: THREE.Vector3;
+  }> = [];
+  for (const support of prepareGroundSupportSampling(instance)) {
     scratchGroundTransform.multiplyMatrices(
       scratchVisualRootInverse,
-      mesh.matrixWorld,
+      support.mesh.matrixWorld,
     );
-    for (const vertexIndex of vertexIndices) {
-      mesh
-        .getVertexPosition(vertexIndex, scratchGroundVertex)
-        .applyMatrix4(scratchGroundTransform);
-      minimumY = Math.min(minimumY, scratchGroundVertex.y);
+    for (let supportIndex = 0; supportIndex < support.vertexIndices.length; supportIndex += 1) {
+      const vertexIndex = support.vertexIndices[supportIndex];
+      samples.push({
+        mesh: support.mesh,
+        vertexIndex,
+        position: sampleGroundSupportVertex(
+          support,
+          vertexIndex,
+          scratchGroundTransform,
+        ).clone(),
+      });
+    }
+  }
+  return samples;
+}
+
+/** Ground the reduced skinned support hull in visualRoot-local coordinates. */
+function groundSkinnedCharacter(instance: SkinnedCharacterInstance): number {
+  let minimumY = Number.POSITIVE_INFINITY;
+  for (const support of prepareGroundSupportSampling(instance)) {
+    scratchGroundTransform.multiplyMatrices(
+      scratchVisualRootInverse,
+      support.mesh.matrixWorld,
+    );
+    for (let supportIndex = 0; supportIndex < support.vertexIndices.length; supportIndex += 1) {
+      const vertexIndex = support.vertexIndices[supportIndex];
+      const groundedVertex = sampleGroundSupportVertex(
+        support,
+        vertexIndex,
+        scratchGroundTransform,
+      );
+      minimumY = Math.min(minimumY, groundedVertex.y);
     }
   }
   if (!Number.isFinite(minimumY)) return 0;
