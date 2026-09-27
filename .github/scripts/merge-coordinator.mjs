@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { validateEffectiveRules } from './auto-merge.mjs';
+import { resolveRulesMode } from './auto-merge.mjs';
 import { validatePullRequest } from './ci-policy.mjs';
 
 const REQUIRED_CHECKS = [
@@ -101,7 +101,10 @@ function validateReadyCandidate(snapshot, repository) {
 }
 
 async function validateRulesBeforeWrite(github) {
-  validateEffectiveRules(await github.effectiveRules());
+  return resolveRulesMode({
+    effectiveRules: () => github.effectiveRules(),
+    repository: () => github.repository(),
+  });
 }
 
 async function readCurrentSnapshot(github, priorSnapshot) {
@@ -139,20 +142,24 @@ const humanReasons = {
   review_or_checks_not_current: 'Obtain all required checks and independent review for this exact head and current main.',
   snapshot_unavailable: 'The coordinator could not read complete PR evidence. Inspect repository/API permissions and workflow access.',
   merge_refused: 'GitHub refused the validated merge. Inspect live branch rules, required approvals and automation permissions.',
+  merged_against_unreviewed_base: 'This PR was merged while main changed after validation (possible concurrent direct push). Inspect main at the merge commit and rerun CI there.',
 };
 
-async function leaveHumanNotice({ github, snapshot, repository, owner, reasonCode, runId }) {
+async function leaveHumanNotice({ github, snapshot, repository, owner, reasonCode, runId, mergeCommit, validateRules }) {
   const identity = candidateIdentity(snapshot);
   const marker = markerFor('human', { ...identity, reasonCode });
   const comments = await github.comments(snapshot.pr.number);
-  if (hasBotMarker(comments, marker, github.actor)) return { outcome: 'already_notified', reasonCode };
+  if (hasBotMarker(comments, marker, github.actor)) {
+    return { outcome: 'already_notified', reasonCode };
+  }
 
-  await validateRulesBeforeWrite(github);
+  await validateRules();
   const runUrl = safeRunUrl(repository, runId);
   const details = runUrl ? `\nCI run: ${runUrl}` : '';
+  const mergeDetails = SHA.test(mergeCommit ?? '') ? `\nMerge commit: ${mergeCommit}` : '';
   await github.comment(snapshot.pr.number,
     `@${owner}\n<!-- ${marker} -->\n${humanReasons[reasonCode] ?? 'Inspect this candidate before continuing.'}\nReason: ${reasonCode}.\n` +
-    `Candidate: head ${identity.head}, base ${identity.base}.${details}`);
+    `Candidate: head ${identity.head}, base ${identity.base}.${details}${mergeDetails}`);
   return { outcome: 'needs_human', reasonCode };
 }
 
@@ -173,8 +180,16 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
     assert.equal(typeof github?.[method], 'function', `github.${method} is required.`);
   }
 
-  // Refuse every mutation when the protected-main policy is absent or weakened.
-  await validateRulesBeforeWrite(github);
+  // Re-resolve before every write, retaining the latest mode for the tick's report.
+  let rulesMode;
+  async function validateRules() {
+    rulesMode = await validateRulesBeforeWrite(github);
+    return rulesMode;
+  }
+  async function notifyHuman(details) {
+    return leaveHumanNotice({ ...details, validateRules });
+  }
+  await validateRules();
   const results = [];
   const pulls = await github.listPulls();
   assert.ok(Array.isArray(pulls), 'listPulls must return an array.');
@@ -187,10 +202,14 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
     }
 
     let snapshot;
-    try { snapshot = await github.snapshot(number); }
-    catch {
-      if (validIdentity({pr:pullRequest})) await leaveHumanNotice({ github, snapshot:{pr:pullRequest}, repository, owner, reasonCode:'snapshot_unavailable' });
-      results.push(blockedResult(number, 'snapshot_unavailable')); continue;
+    try {
+      snapshot = await github.snapshot(number);
+    } catch {
+      if (validIdentity({ pr: pullRequest })) {
+        await notifyHuman({ github, snapshot: { pr: pullRequest }, repository, owner, reasonCode: 'snapshot_unavailable' });
+      }
+      results.push(blockedResult(number, 'snapshot_unavailable'));
+      continue;
     }
     if (!validIdentity(snapshot)) {
       results.push(blockedResult(number, 'malformed_snapshot'));
@@ -205,7 +224,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
       continue;
     }
     if (snapshot.pr.head.repo?.full_name !== repository) {
-      await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'fork_requires_human' });
+      await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'fork_requires_human' });
       results.push(blockedResult(number, 'fork_requires_human'));
       continue;
     }
@@ -213,7 +232,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
     try {
       validateReadyCandidate(snapshot, repository);
     } catch {
-      await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'candidate_evidence_invalid' });
+      await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'candidate_evidence_invalid' });
       results.push(blockedResult(number, 'candidate_evidence_invalid'));
       continue;
     }
@@ -225,7 +244,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
     if (snapshot.pr.mergeable === false) {
       // Jev may classify evidence but cannot choose conflicting code for us.
       try { await triage?.(snapshot); } catch { /* deterministic human path */ }
-      await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'conflict_requires_repair' });
+      await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'conflict_requires_repair' });
       results.push(blockedResult(number, 'conflict_requires_repair'));
       continue;
     }
@@ -235,14 +254,14 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
         const current = await freshUpdateSnapshot(github, snapshot);
         validateReadyCandidate(current, repository);
         assert.equal(current.behind, true, 'PR is no longer behind main.');
-        await validateRulesBeforeWrite(github);
+        await validateRules();
         assert.equal(current.pr.mergeable, true, 'Branch now conflicts.');
         await github.update(current.pr, current.pr.head.sha);
         results.push({ number, outcome: 'updated', head: current.pr.head.sha });
-        return { results };
+        return { rulesMode, results };
       } catch (error) {
         if ([403, 409, 422].includes(error.status)) {
-          await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'branch_update_refused' });
+          await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'branch_update_refused' });
         }
         results.push(blockedResult(number, 'stale_before_update'));
         continue;
@@ -252,7 +271,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
     // GitHub can retain an older PR base SHA while its branch is behind main.
     // Only the update path may accept it; a current branch needs human inspection.
     if (snapshot.baseSha !== snapshot.pr.base.sha) {
-      await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'stale_base_metadata' });
+      await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'stale_base_metadata' });
       results.push(blockedResult(number, 'stale_base_metadata'));
       continue;
     }
@@ -266,33 +285,33 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
         decision = null;
       }
       if (!isTriageDecision(decision)) {
-        await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'triage_unavailable', runId: failures[0].runId });
+        await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'triage_unavailable', runId: failures[0].runId });
         results.push(blockedResult(number, 'triage_unavailable'));
         continue;
       }
       if (decision.route !== 'retry_ci' || decision.confidence < 0.8 || decision.probability < 0.95) {
-        await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'triage_needs_human', runId: failures[0].runId });
+        await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'triage_needs_human', runId: failures[0].runId });
         results.push(blockedResult(number, 'triage_needs_human'));
         continue;
       }
 
       const retryable = failures.find(isRetryableFailure);
       if (!retryable || !failures.every(isRetryableFailure)) {
-        await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'retry_not_permitted', runId: failures[0].runId });
+        await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'retry_not_permitted', runId: failures[0].runId });
         results.push(blockedResult(number, 'retry_not_permitted'));
         continue;
       }
       const retryMarker = markerFor('retry', { ...candidateIdentity(snapshot), runId: String(retryable.runId) });
       const comments = await github.comments(number);
       if (hasBotMarker(comments, retryMarker, github.actor)) {
-        await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'retry_limit_reached', runId: retryable.runId });
+        await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'retry_limit_reached', runId: retryable.runId });
         results.push(blockedResult(number, 'retry_limit_reached'));
         continue;
       }
 
       // Persist the attempt before rerunning. The marker has no mention and its
       // only purpose is to make retry limits survive separate coordinator ticks.
-      await validateRulesBeforeWrite(github);
+      await validateRules();
       await github.comment(number, `<!-- ${retryMarker} -->`);
       try {
         const current = await freshSnapshot(github, snapshot);
@@ -302,7 +321,7 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
         const currentRun = current.checks.find((check) => check.state === 'failure' && String(check.runId ?? '') === String(retryable.runId));
         assert.ok(currentRun?.state === 'failure' && isRetryableFailure(currentRun),
           'The failed infrastructure run changed before rerun.');
-        await validateRulesBeforeWrite(github);
+        await validateRules();
         await github.rerun(retryable.runId);
         results.push({ number, outcome: 'rerun', runId: retryable.runId });
       } catch {
@@ -314,18 +333,18 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
     if (hasPendingChecks(snapshot)) {
       const idleMs = Date.now() - Date.parse(snapshot.pr.updated_at);
       if (Number.isFinite(idleMs) && idleMs >= 24 * 60 * 60 * 1000) {
-        await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'checks_stalled_24h' });
+        await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'checks_stalled_24h' });
       }
       results.push({ number, outcome: 'waiting', reasonCode: 'checks_pending' });
       continue;
     }
     if (!snapshot.conversationsResolved) {
-      await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'conversations_unresolved' });
+      await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'conversations_unresolved' });
       results.push(blockedResult(number, 'conversations_unresolved'));
       continue;
     }
     if (!hasRequiredChecks(snapshot) || !hasExactPassingReview(snapshot)) {
-      await leaveHumanNotice({ github, snapshot, repository, owner, reasonCode: 'review_or_checks_not_current' });
+      await notifyHuman({ github, snapshot, repository, owner, reasonCode: 'review_or_checks_not_current' });
       results.push(blockedResult(number, 'review_or_checks_not_current'));
       continue;
     }
@@ -338,19 +357,37 @@ export async function coordinate({ github, triage, repository, owner = 'Joehl110
       assert.ok(current.conversationsResolved, 'Review conversations are unresolved.');
       assert.ok(hasRequiredChecks(current), 'Required checks are no longer successful.');
       assert.ok(hasExactPassingReview(current), 'Independent review is no longer exact and passing.');
-      await validateRulesBeforeWrite(github);
-      const merged = await github.merge(current.pr, current.pr.head.sha, current.pr.base.sha);
+      // freshSnapshot enforces live main == PR base; validateReadyCandidate rejects
+      // drafts; the required-check assertion above applies in both rules modes.
+      const mergeRulesMode = await validateRules();
+      const merged = await github.merge(current.pr, current.pr.head.sha, current.pr.base.sha,
+        { rulesMode: mergeRulesMode });
       results.push({ number, outcome: merged.outcome, mergeCommit: merged.mergeCommit });
-      return { results };
-    } catch {
+      return { rulesMode, results };
+    } catch (error) {
+      if (error?.code === 'merged_against_unreviewed_base') {
+        // The merge already happened. Notify using its reviewed identity even
+        // though the PR is closed, and never hide the outcome if the notice fails.
+        let noticeOutcome;
+        try {
+          const notice = await notifyHuman({ github, snapshot, repository, owner,
+            reasonCode: error.code, mergeCommit: error.mergeCommit });
+          noticeOutcome = notice.outcome;
+        } catch {
+          noticeOutcome = 'blocked';
+        }
+        results.push({ number, outcome: 'merged_unverified_base', reasonCode: error.code,
+          mergeCommit: error.mergeCommit, noticeOutcome });
+        return { rulesMode, results };
+      }
       const after = await github.snapshot(number);
       if (validIdentity(after) && sameIdentity(snapshot, after) && after.pr.state === 'open' && !after.pr.draft) {
-        await leaveHumanNotice({github, snapshot:after, repository, owner, reasonCode:'merge_refused'});
+        await notifyHuman({ github, snapshot: after, repository, owner, reasonCode: 'merge_refused' });
       }
       results.push(blockedResult(number, 'stale_before_merge'));
     }
   }
-  return { results };
+  return { rulesMode, results };
 }
 
 export const __testables = {

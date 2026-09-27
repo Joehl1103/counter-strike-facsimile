@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
-import { runAutoMerge } from './auto-merge.mjs';
+import { PLAN_LIMIT_MESSAGE, runAutoMerge } from './auto-merge.mjs';
 import { execFile as executeFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { appendFileSync } from 'node:fs';
@@ -22,6 +22,16 @@ export function createApi({ token, fetcher = fetch }) {
     if (!response.ok) {
       const error = new Error(`GitHub ${method} failed (${response.status}); response omitted.`);
       error.status = response.status;
+      if (response.status === 403) {
+        try {
+          const body = await response.json();
+          if (body?.message === PLAN_LIMIT_MESSAGE) {
+            error.planLimited = true;
+          }
+        } catch {
+          // Invalid error bodies must not replace or weaken the sanitized failure.
+        }
+      }
       throw error;
     }
     return response.status === 204 ? null : response.json();
@@ -128,9 +138,11 @@ export function createGitHub({ repository, api, runGh, notifyLogin = 'github-act
     snapshot,
     listPulls: () => pages(api, `${root}/pulls?state=open&base=main&sort=created&direction=asc`),
     effectiveRules: () => api(`${root}/rules/branches/main`),
+    repository: () => api(root),
     update: (pr, expectedHead) => api(`${root}/pulls/${pr.number}/update-branch`, 'PUT', { expected_head_sha: expectedHead }),
-    merge: (pr, expectedHead, expectedBase) => runAutoMerge({
+    merge: (pr, expectedHead, expectedBase, { rulesMode = 'github_rules' } = {}) => runAutoMerge({
       expected: { repository, number: pr.number, head: expectedHead, base: expectedBase }, runGh, allowQueue: false,
+      rulesMode,
     }),
     rerun: (runId) => { assert.ok(Number.isSafeInteger(runId) && runId > 0); return api(`${root}/actions/runs/${runId}/rerun-failed-jobs`, 'POST'); },
     comments: async (number) => (await pages(api, `${root}/issues/${number}/comments`))
@@ -151,6 +163,9 @@ async function main() {
   assert.ok(process.env.MERGE_BOT_LOGIN, 'Configure MERGE_BOT_LOGIN to match the automation credential.');
   const { coordinate } = await import('./merge-coordinator.mjs');
   const result = await coordinate({ github, triage, repository: process.env.GITHUB_REPOSITORY, owner: 'Joehl1103' });
+  const modeExplanation = result.rulesMode === 'self_enforced'
+    ? ' (GitHub rules API unavailable on private Free plan; coordinator enforces required checks itself)' : '';
+  console.log(`Rules mode: ${result.rulesMode}${modeExplanation}`);
   const summary = JSON.stringify(result, null, 2);
   console.log(summary);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\nCoordinator results\n\n\`\`\`json\n${summary}\n\`\`\`\n`);

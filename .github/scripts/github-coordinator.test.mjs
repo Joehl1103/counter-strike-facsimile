@@ -43,3 +43,81 @@ test('temporary merge checks accept exact merge SHA or PR head in run metadata, 
   f.mergeChecks[0].head_sha='d'.repeat(40);assert.equal(selectChecks(f).checks[0].state,'pending');
  }
 });
+
+const upgradeMessage = 'Upgrade to GitHub Pro or make this repository public to enable this feature.';
+
+test('only an exact 403 upgrade body marks the sanitized API error plan-limited', async () => {
+  for (const [status, message, expectedPlanLimited] of [
+    [403, upgradeMessage, true],
+    [403, 'Permission denied', false],
+    [403, `${upgradeMessage} Extra content`, false],
+    [500, upgradeMessage, false],
+    [404, upgradeMessage, false],
+  ]) {
+    const api = createApi({ token: 'secret', fetcher: async () => ({
+      ok: false, status, json: async () => ({ message }),
+    }) });
+    await assert.rejects(api('/repos/a/b/rules/branches/main'), (error) => {
+      assert.equal(error.status, status);
+      assert.equal(error.planLimited === true, expectedPlanLimited);
+      assert.equal(error.message, `GitHub GET failed (${status}); response omitted.`);
+      return true;
+    });
+  }
+});
+
+test('invalid 403 JSON keeps the original sanitized failure', async () => {
+  const api = createApi({ token: 'secret', fetcher: async () => ({
+    ok: false, status: 403, json: async () => { throw new Error('body contained secret'); },
+  }) });
+  await assert.rejects(api('/repos/a/b'), (error) => {
+    assert.equal(error.status, 403);
+    assert.notEqual(error.planLimited, true);
+    assert.equal(error.message, 'GitHub GET failed (403); response omitted.');
+    return true;
+  });
+});
+
+test('repository visibility lookup uses the repository endpoint', async () => {
+  const github = createGitHub({ repository: 'a/b', api: async (path) => {
+    assert.equal(path, '/repos/a/b');
+    return { private: true };
+  } });
+  assert.deepEqual(await github.repository(), { private: true });
+});
+
+test('adapter passes self-enforced mode to the immediate merge helper', async () => {
+  const calls = [];
+  let pullLookups = 0;
+  const pr = {
+    number: 171, state: 'open', draft: false, base: { ref: 'main', sha: base },
+    head: { sha: head, repo: { full_name: 'a/b' } },
+    title: 'fix: JKH-171 fixture',
+    body: 'https://linear.app/jkhl1103-personal/issue/JKH-171/fixture\n\n## Acceptance Criteria\n- [x] Fixture passes.',
+  };
+  const github = createGitHub({ repository: 'a/b', runGh: async (args) => {
+    calls.push(args);
+    if (args[1] === 'repos/a/b/rules/branches/main') {
+      throw Object.assign(new Error('gh command failed'), {
+        stdout: JSON.stringify({ message: upgradeMessage, status: '403' }),
+        stderr: `gh: ${upgradeMessage} (HTTP 403)\n`,
+      });
+    }
+    if (args[1] === 'repos/a/b/pulls/171') {
+      pullLookups += 1;
+      return { stdout: JSON.stringify(pullLookups === 1 ? pr : { ...pr, merged: true, merge_commit_sha: mergeSha }) };
+    }
+    if (args[1] === 'repos/a/b/branches/main') {
+      return { stdout: JSON.stringify({ commit: { sha: base } }) };
+    }
+    if (args[1] === `repos/a/b/git/commits/${mergeSha}`) {
+      return { stdout: JSON.stringify({ sha: mergeSha, parents: [{ sha: base }] }) };
+    }
+    return { stdout: '' };
+  } });
+  const result = await github.merge(pr, head, base, { rulesMode: 'self_enforced' });
+  assert.equal(result.outcome, 'merged');
+  assert.deepEqual(calls.find((args) => args[0] === 'pr'), [
+    'pr', 'merge', '171', '--repo', 'a/b', '--squash', '--match-head-commit', head,
+  ]);
+});
