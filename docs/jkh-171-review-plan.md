@@ -53,3 +53,10 @@ Code-loading rules appear in every prompt. Report envelopes and artifact names
 bind run ID/attempt/digest/chunk; prior-attempt and missing envelopes fail closed.
 Use Re-run all jobs. Heuristics are not proof of inertness; live Actions remains
 unverified. Test-first checks exposed the old behavior before implementation.
+
+Trusted-ref follow-up (base 38fd7bc): add workflow checkout/guard regression
+tests and extend the planner/render/gate CLI test with a later trusted main
+commit. Check out github.sha in all three jobs, validate both review objects
+and base ancestry, and clarify the prompt and coordinator documentation while
+preserving exact PR base/head binding. Run the full Node test suite and CI
+policy, then commit locally with Joseph's requested message. Do not push.

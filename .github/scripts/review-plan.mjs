@@ -515,7 +515,8 @@ export function renderPrompt(plan, chunk) {
   const diff = chunk.items.map((item) => `\nFILE/PART ${JSON.stringify(item.label)} (${item.kind})\n${item.diff}`).join('');
   return `You are the independent code reviewer, not the implementation agent.
 Review head ${plan.head} against base ${plan.base}, chunk ${chunk.id} (${plan.chunks.indexOf(chunk) + 1}/${plan.chunks.length}).
-The base working tree is NOT the candidate. Review the embedded exact base...head diff
+The working tree is trusted main code from the workflow commit;
+it is NOT the candidate and is not necessarily the reviewed base. Review the embedded exact base...head diff
 and the entire HEAD tree's available text copies in .codex-review-input/head/<path>.
 The packet's context-index.json inventories copied and omitted files. links.txt lists path -> target
 for symlinks as data only; submodules and every unavailable file are listed below with reasons.

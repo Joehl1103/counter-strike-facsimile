@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -55,12 +55,15 @@ jobs:
       - name: Build trusted manifest from immutable git objects
         id: plan
         env:
+          TRUSTED_SHA: ${{ github.sha }}
           REVIEW_HEAD: ${{ github.event.pull_request.head.sha }}
           REVIEW_BASE: ${{ github.event.pull_request.base.sha }}
           REVIEW_MANIFEST: ${{ runner.temp }}/review-manifest.json
         run: |
-          test "$(git rev-parse HEAD)" = "$REVIEW_BASE"
+          test "$(git rev-parse HEAD)" = "$TRUSTED_SHA"
+          git cat-file -e "$REVIEW_BASE^{commit}"
           git cat-file -e "$REVIEW_HEAD^{commit}"
+          git merge-base --is-ancestor "$REVIEW_BASE" "$TRUSTED_SHA"
           node .github/scripts/review-plan.mjs plan "$REVIEW_BASE" "$REVIEW_HEAD" "$GITHUB_WORKSPACE"
 
   reviewer:
@@ -93,8 +96,8 @@ jobs:
           fi
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          # Only trusted base files enter the working tree. Inspect the head via git objects.
-          ref: ${{ github.event.pull_request.base.sha }}
+          # Use the trusted workflow commit on main. Inspect the candidate via git objects.
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -102,14 +105,17 @@ jobs:
           node-version: '22.14.0'
       - name: Regenerate chunk packet and verify plan digest
         env:
+          TRUSTED_SHA: ${{ github.sha }}
           REVIEW_HEAD: ${{ github.event.pull_request.head.sha }}
           REVIEW_BASE: ${{ github.event.pull_request.base.sha }}
           REVIEW_CHUNK: ${{ matrix.chunk }}
           REVIEW_DIGEST: ${{ needs.plan.outputs.digest }}
         shell: bash
         run: |
-          test "$(git rev-parse HEAD)" = "$REVIEW_BASE"
+          test "$(git rev-parse HEAD)" = "$TRUSTED_SHA"
+          git cat-file -e "$REVIEW_BASE^{commit}"
           git cat-file -e "$REVIEW_HEAD^{commit}"
+          git merge-base --is-ancestor "$REVIEW_BASE" "$TRUSTED_SHA"
           node .github/scripts/review-plan.mjs render "$REVIEW_BASE" "$REVIEW_HEAD" "$GITHUB_WORKSPACE" "$REVIEW_CHUNK" "$REVIEW_DIGEST"
       # Isolate npm's global binaries before the Action installs packages. The
       # trusted adapter then starts the key-bearing relay in the Action's proxy
@@ -182,10 +188,10 @@ jobs:
       pull-requests: read
       statuses: write
     steps:
-      # Use the base's validator, so a PR cannot simply weaken its own result parser.
+      # Use the workflow commit's validator, so a PR cannot weaken its own result parser.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -203,6 +209,7 @@ jobs:
         id: validate
         if: ${{ always() }}
         env:
+          TRUSTED_SHA: ${{ github.sha }}
           GATE_PREPARATION_RESULT: ${{ job.status }}
           PLAN_RESULT: ${{ needs.plan.result }}
           REVIEW_RESULT: ${{ needs.reviewer.result }}
@@ -210,7 +217,12 @@ jobs:
           REVIEW_REPORTS: ${{ runner.temp }}/codex-review-reports
           REVIEW_HEAD: ${{ github.event.pull_request.head.sha }}
           REVIEW_BASE: ${{ github.event.pull_request.base.sha }}
-        run: node .github/scripts/review-gate.mjs
+        run: |
+          test "$(git rev-parse HEAD)" = "$TRUSTED_SHA"
+          git cat-file -e "$REVIEW_BASE^{commit}"
+          git cat-file -e "$REVIEW_HEAD^{commit}"
+          git merge-base --is-ancestor "$REVIEW_BASE" "$TRUSTED_SHA"
+          node .github/scripts/review-gate.mjs
       - name: Publish exact-head status, rejecting a changed PR or base
         if: ${{ always() }}
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7

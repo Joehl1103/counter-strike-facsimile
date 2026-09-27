@@ -140,8 +140,10 @@ from the main-only `codex-review` environment; the Action's proxy receives only
 a local placeholder. It does not use desktop authentication
 or download a model on the runner.
 
-The `pull_request_target` workflow checks out the event's immutable base SHA in
-the planning, reviewer and gate jobs. Workflow, planner, prompt template, proxy/relay and validator come from
+The `pull_request_target` workflow checks out the workflow commit on main
+(`github.sha`) in the planning, reviewer and gate jobs; the reviewed base remains
+the PR's recorded base SHA, even when it predates main, and the coordinator
+updates the PR before merge. Workflow, planner, prompt template, proxy/relay and validator come from
 that trusted checkout. **Reviewer workflow/script changes take effect only after
 they reach main**; the PR proposing them is still reviewed by the old workflow.
 Forks are refused. Candidate code is never checked out at the workspace root,
