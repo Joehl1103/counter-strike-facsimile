@@ -1034,7 +1034,6 @@ void test('reduced grounding stays within two centimetres of full skin bounds in
     'fiveseven',
     'elite',
   ] as const;
-  const deathVariants = [0, 1, 2, 3] as const;
   const parentTransforms = [
     { position: [0, 0, 0] as const, rotation: [0, 0, 0] as const },
     {
@@ -1131,6 +1130,7 @@ void test('grounding support vertices match Three native skinning for both shipp
     'fiveseven',
     'elite',
   ] as const;
+  const deathVariants = [0, 1, 2, 3] as const;
   const parentTransforms = [
     { position: [0, 0, 0] as const, rotation: [0, 0, 0] as const },
     {
