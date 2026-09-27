@@ -135,7 +135,7 @@ void test('page commits bot body motion once per tick and propagates actual supp
   );
   assert.match(
     fixtureBranch,
-    /enemy\.root\.updateMatrixWorld\(true\);\s*return;\s*\}\s*$/,
+    /enemy\.root\.updateMatrixWorld\(true\);\s*syncBotRigToAuthority\(enemy\);\s*return;\s*\}\s*$/,
   );
 
   const allyLoopStart = live.indexOf('allies.forEach((ally) => {');
